@@ -1,5 +1,5 @@
 ﻿// Rob Holme (rob@holme.com.au)
-// 30/05/2015
+// 01/06/2015
 
 using System;
 using System.Collections.Generic;
@@ -10,17 +10,30 @@ namespace HL7ListenerApplication
 {
     class Program
     {
-        private static int port = 0;
+        private static int port = 5000; 
         private static string filePath = null;
         private static bool sendACK = true;
+        private static string passthruHost;
+        private static int passthruPort;
 
         static void Main(string[] args)
         {
             // parse command line arguments
             if (ParseArgs(args))
             {
-                // create a new instance of HL7TCPListener
-                HL7TCPListener listener = new HL7TCPListener(port, filePath, sendACK);
+                // create a new instance of HL7TCPListener. Set optional properties to rturn ACKs, passthru messages, archive locaiton. Start the listener.
+                HL7TCPListener listener = new HL7TCPListener(port);
+                listener.SendACK = sendACK;
+                if(filePath != null)
+                {
+                    listener.FilePath = filePath;
+                }
+                if (passthruHost != null)
+                {
+                    listener.PassthruHost = passthruHost;
+                    listener.PassthruPort = passthruPort;
+                }
+                listener.Start();
             }
         }
 
@@ -45,7 +58,6 @@ namespace HL7ListenerApplication
                     case "-PORT":
                     case "-P":
                     case "--PORT":
-                    case "--P":
                         if (i + 1 < cmdArgs.Length) 
                         {
                             try
@@ -75,7 +87,6 @@ namespace HL7ListenerApplication
                     case "-FILEPATH":
                     case "--FILEPATH":
                     case "-F":
-                    case "--F":
                         if (i + 1 < cmdArgs.Length)
                         {
                             filePath = cmdArgs[i + 1];
@@ -96,8 +107,39 @@ namespace HL7ListenerApplication
                     case "-NOACK":
                     case "--NOACK":
                     case "-N":
-                    case "--N":
                         sendACK = false;
+                        break;
+                    // determine if the messsages should be pased through to a remote host. Identify the hostname/IP and port.
+                    case "-PASSTHRU":
+                    case "--PASSTHRU":
+                    case "-T":
+                        if (i + 1 < cmdArgs.Length)
+                        {
+                            string[] temp = cmdArgs[i + 1].Split(':');
+                            if (temp.Length == 2)
+                            {
+                                passthruHost = temp[0];
+                                try
+                                {
+                                    passthruPort = int.Parse(temp[1]);
+                                }
+                                catch (FormatException)
+                                {
+                                    LogWarning("The port number provided needs to be an integer between 1 and 65535");
+                                    return false;
+                                }
+                                if ((passthruPort == 0) || (passthruPort > 65535))
+                                {
+                                    LogWarning("The port number provided needs to be an integer beetween 1 and 65535");
+                                    return false;
+                                }
+                            }
+                            else
+                            {
+                                LogWarning("The passthru host and IP where not provided. eg -passthru host:port");
+                                return false;
+                            }
+                        }
                         break;
                 }
             }
@@ -111,11 +153,11 @@ namespace HL7ListenerApplication
         static void Usage()
         {
             Console.WriteLine("");
-            Console.WriteLine(" HL7Listener - v1.0 - Robert Holme. A simple MLLP listener to archive HL7 messages to disk.");
+            Console.WriteLine(" HL7Listener - v1.1 - Robert Holme. A simple MLLP listener to archive HL7 messages to disk.");
             Console.WriteLine(" Usage:");
             Console.WriteLine("");
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine(" HL7Listener.exe -Port <PortNumber> [-FilePath <path>] [-NoACK]");
+            Console.WriteLine(" HL7Listener.exe -Port <PortNumber> [-FilePath <path>] [-NoACK] [-Passthru <host>:<port>]");
             Console.ResetColor();
             Console.WriteLine("");
             Console.WriteLine("    -Port <PortNumber> specifies the port to listen on. Must be an integer between 1025 and 65535");
@@ -125,6 +167,8 @@ namespace HL7ListenerApplication
             Console.WriteLine("");
             Console.WriteLine("    -NoACK prevents ACKs from being sent even if the received messages requests an Accept Acknowledgement");
             Console.WriteLine("           If the original message does not request an Accept Acknowledgement then no ACK will be sent regardless of this switch.");
+            Console.WriteLine("");
+            Console.WriteLine("    -Passthru <host>:<port> Pass all messages received throught to the remote host. eg -Passthru somehost:5000");
             Console.WriteLine("");
         }
 

@@ -1,5 +1,5 @@
 ﻿// Rob Holme (rob@holme.com.au)
-// 30/05/2015
+// 01/06/2015
 
 using System;
 using System.Collections.Generic;
@@ -16,24 +16,46 @@ namespace HL7ListenerApplication
 {
     class HL7TCPListener
     {
-
+        const int TCP_TIMEOUT = 3000; // timeout value for receiving TCP data in millseconds
         private TcpListener tcpListener;
         private Thread tcpListenerThread;
         private int listernerPort;
-        private string archivePath;
-        private bool sendACK;
+        private string archivePath = null;
+        private bool sendACK = true;
+        private string passthruHost = null;
+        private int passthruPort;
+        NetworkStream PassthruClientStream;
+        TcpClient passthruClient; //= new TcpClient();
+        IPEndPoint remoteEndpoint;// = new IPEndPoint(IPAddress.Parse(this.PassthruHost), this.passthruPort);
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public HL7TCPListener(int port, string filePath =  null, bool ACK = true)
+        public HL7TCPListener(int port)
         {
-            this.listernerPort = port;
-            this.archivePath = filePath;
-            this.sendACK = ACK;
+            this.listernerPort = port;          
+        }
+
+        /// <summary>
+        /// Start the TCP listener. Log the options set.
+        /// </summary>
+        public void Start()
+        {
             this.tcpListener = new TcpListener(IPAddress.Any, this.listernerPort);
             this.tcpListenerThread = new Thread(new ThreadStart(StartListener));
-            this.LogInformation("Starting HL7 listener on port " + this.listernerPort);
+            this.LogInformation("# Starting HL7 listener on port " + this.listernerPort);
+            if (this.archivePath != null)
+            {
+                this.LogInformation("# Archiving received messages to: " + this.archivePath);
+            }
+            if (!sendACK)
+            {
+                this.LogInformation("# Acknowledgements (ACKs) will not be sent");
+            }
+            if (this.passthruHost != null)
+            {
+                this.LogInformation("# Passing messages onto " + this.passthruHost + ":" + this.passthruPort);
+            }
             this.tcpListenerThread.Start(); 
         }
 
@@ -74,11 +96,25 @@ namespace HL7ListenerApplication
             int filenameSequenceStart = random.Next(0, 1000000); // generate 6 digit sequence number
             TcpClient tcpClient = (TcpClient)client;
             NetworkStream clientStream = tcpClient.GetStream();
+            clientStream.ReadTimeout = TCP_TIMEOUT;
+            clientStream.WriteTimeout = TCP_TIMEOUT;
+
             byte[] messageBuffer = new byte[4096];
             int bytesRead;
             String messageData = "";
             int messageCount = 0;
 
+            // create a connection to the Passthru host if the -PassThru option was specified.
+            if (PassthruHost != null)
+            {
+                passthruClient = new TcpClient();
+                remoteEndpoint = new IPEndPoint(IPAddress.Parse(this.PassthruHost), this.passthruPort);
+                passthruClient.Connect(remoteEndpoint);
+                PassthruClientStream = passthruClient.GetStream();
+                PassthruClientStream.ReadTimeout = TCP_TIMEOUT;
+                PassthruClientStream.WriteTimeout = TCP_TIMEOUT;
+            }
+                       
             while (true)
             {
                 bytesRead = 0;
@@ -87,11 +123,11 @@ namespace HL7ListenerApplication
                     // Wait until a client application submits a message
                     bytesRead = clientStream.Read(messageBuffer, 0, 4096);
                 }
-                catch (Exception  e)
+                catch (Exception e)
                 {
                     // A network error has occurred
-                    LogWarning("An exception has occurred while receiving the message from " + tcpClient.Client.RemoteEndPoint);
-                    LogWarning(e.Message);
+                    LogInformation("Connection from " + tcpClient.Client.RemoteEndPoint + " has ended");
+                    LogInformation(e.Message);
                     break;
                 }
                 if (bytesRead == 0)
@@ -138,11 +174,20 @@ namespace HL7ListenerApplication
                                 catch (Exception e)
                                 {
                                     // A network error has occurred
-                                    LogWarning("An exception has occurred while sending an ACK to the client" + tcpClient.Client.RemoteEndPoint);
-                                    LogWarning(e.Message);
+                                    LogInformation("An error has occurred while sending an ACK to the client " + tcpClient.Client.RemoteEndPoint);
+                                    LogInformation(e.Message);
                                     break;
                                 }
                            
+                            }
+                            // pass the message onto a remote host if specified
+                            if (PassthruHost != null)
+                            {
+                                // connect to the remote host
+                                LogInformation("Sending message to -PassThru Host " + this.passthruHost + ":" + this.passthruPort);
+                                Thread passthruThread = new Thread(new ParameterizedThreadStart(SendData));
+                                passthruThread.Start(message.ToString());
+                                
                             }
                         }
                         catch (Exception e)
@@ -156,10 +201,88 @@ namespace HL7ListenerApplication
                 }
             }
             LogInformation("Total messages received:" + messageCount);
+            clientStream.Close();
             clientStream.Dispose();
             tcpClient.Close();
         }
+        
+         
+        /// <summary> 
+        /// Send the HL7 messsage to the remote host in a MLLP frame
+        /// </summary>
+        /// <param name="ClientStream"></param>
+        /// <param name="MessageData"></param>
+        private void SendData(object MessageData)
+        {
+            byte[] receiveBuffer = new byte[4096];
+            int bytesRead;
+            string ackData = "";
 
+            // generate a MLLP framed messsage
+            StringBuilder messageString = new StringBuilder();
+            messageString.Append((char)0x0B);
+            messageString.Append(MessageData.ToString());
+            messageString.Append((char)0x1C);
+            messageString.Append((char)0x0D);
+
+            try
+            {
+                // encode and send the message
+                UTF8Encoding encoder = new UTF8Encoding();
+                byte[] buffer = encoder.GetBytes(messageString.ToString());
+                // if the client connection has timed out, or the remote host has disconected, reconnect.
+                if (!this.PassthruClientStream.CanWrite)
+                {
+                    this.passthruClient = new TcpClient();
+                    this.remoteEndpoint = new IPEndPoint(IPAddress.Parse(this.PassthruHost), this.passthruPort);
+                    this.passthruClient.Connect(remoteEndpoint);
+                    this.PassthruClientStream = passthruClient.GetStream();
+                    this.PassthruClientStream.ReadTimeout = TCP_TIMEOUT;
+                    this.PassthruClientStream.WriteTimeout = TCP_TIMEOUT;
+                }
+                this.PassthruClientStream.Write(buffer, 0, buffer.Length);
+                this.PassthruClientStream.Flush();
+                
+                // wait for the ACK to be returned, or a timeout occurrs. Do nothing with the ACK recived (discard).
+                while (true)
+                {
+                    try
+                    { 
+                        bytesRead = this.PassthruClientStream.Read(receiveBuffer, 0, 4096);
+                        // Message buffer received successfully
+                        ackData += Encoding.UTF8.GetString(receiveBuffer, 0, bytesRead);
+                        // Find a VT character, this is the beginning of the MLLP frame
+                        int start = ackData.IndexOf((char)0x0B);
+                        if (start >= 0)
+                        {
+                            // Search for the end of the MLLP frame (a FS character)
+                            int end = ackData.IndexOf((char)0x1C);
+                            if (end > start)
+                            {
+                                LogInformation("ACK received from -PassThru host");
+                                ackData = "";
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // A network error has occurred, such as the timeout expiring.
+                        // LogInformation("No ACK received from -Passthru host");
+                        this.PassthruClientStream.Close();
+                        this.PassthruClientStream.Dispose();
+                        this.passthruClient.Close();
+                        break;
+                    }
+                }
+
+            }
+            catch (Exception e)
+            {
+                LogWarning("Unable to send messsage to -Passsthru host (" + this.PassthruHost + ":" + this.passthruPort + ")");
+                LogWarning(e.Message);
+            }
+
+        }
 
         /// <summary>
         /// /// <summary>
@@ -217,7 +340,37 @@ namespace HL7ListenerApplication
         public bool SendACK
         {
             get { return this.sendACK; }
-            set { this.sendACK = SendACK; }
+            set { this.sendACK = value; }
+        }
+
+
+        /// <summary>
+        /// The PassthruHost property identifies the host to pass the messages through to
+        /// </summary>
+        public string PassthruHost 
+        {
+            set { this.passthruHost = value; }
+            get {return this.passthruHost;}
+        }
+
+
+        /// <summary>
+        /// The PassthruPort property identies the remote port to pass the messages thought to.
+        /// </summary>
+        public int PassthruPort
+        {
+            set { this.passthruPort = value; }
+            get { return this.passthruPort; }
+        }
+
+
+        /// <summary>
+        /// The FilePath property contains the path to archive the received messages to
+        /// </summary>
+        public string FilePath
+        {
+            set { this.archivePath = value; }
+            get { return this.archivePath; }
         }
 
         /// <summary>
