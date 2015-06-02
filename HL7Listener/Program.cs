@@ -1,5 +1,5 @@
 ﻿// Rob Holme (rob@holme.com.au)
-// 01/06/2015
+// 02/06/2015
 
 using System;
 using System.Collections.Generic;
@@ -33,7 +33,10 @@ namespace HL7ListenerApplication
                     listener.PassthruHost = passthruHost;
                     listener.PassthruPort = passthruPort;
                 }
-                listener.Start();
+                if (!listener.Start())
+                {
+                    LogWarning("Exiting");
+                }
             }
         }
 
