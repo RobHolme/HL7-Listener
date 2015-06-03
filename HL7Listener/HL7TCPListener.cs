@@ -17,7 +17,7 @@ namespace HL7ListenerApplication
 {
     class HL7TCPListener
     {
-        const int TCP_TIMEOUT = 30000; // timeout value for receiving TCP data in millseconds
+        const int TCP_TIMEOUT = 300000; // timeout value for receiving TCP data in millseconds
         private TcpListener tcpListener;
         private Thread tcpListenerThread;
         private Thread passthruThread;
@@ -86,6 +86,7 @@ namespace HL7ListenerApplication
                 passthruThread.Start();
                 // create a thread to recieve the ACKs from the passthru host
                 this.passthruAckThread = new Thread(new ThreadStart(ReceieveACK));
+                passthruAckThread.Start();
                 LogInformation("Connected to PassThru host");
             }
             return true;
@@ -274,6 +275,7 @@ namespace HL7ListenerApplication
                             this.PassthruClientStream.ReadTimeout = TCP_TIMEOUT;
                             this.PassthruClientStream.WriteTimeout = TCP_TIMEOUT;
                         }
+                        LogInformation("Sending message to PassThru host " + this.passthruHost + ":" + this.passthruPort);
                         this.PassthruClientStream.Write(buffer, 0, buffer.Length);
                         this.PassthruClientStream.Flush();
                     }
@@ -283,7 +285,7 @@ namespace HL7ListenerApplication
                         LogWarning(e.Message);
                     }
                 }
-                Thread.Sleep(500);
+                Thread.Sleep(2000);
             }
         }
 
@@ -348,6 +350,7 @@ namespace HL7ListenerApplication
             byte[] receiveBuffer = new byte[4096];
 
             // wait for the ACK to be returned, or a timeout occurrs. Do nothing with the ACK recived (discard).
+            LogInformation("Recieve ACK thread started");
             while (this.runThread)
             {
                 try
@@ -368,7 +371,7 @@ namespace HL7ListenerApplication
                         }
                     }
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     LogWarning("Connecion timed out or ended while waiting for ACK from PassThru host.");
                     break;
