@@ -1,20 +1,20 @@
 ﻿// Rob Holme (rob@holme.com.au)
-// 03/06/2015
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.IO;
-using System.Net;
-using System.Net.Sockets;
-using System.Threading;
-using System.Collections.Concurrent;
-
+// 03/06/2015 - Intital version
+// 01/09/2016 - Changed behaviour to always send ACKS (unless -NoACK is set). No longer honouring the ACK mode from MSH-15, this caused issues for senders epecting ACKS but not setting MSH-15.
 
 namespace HL7ListenerApplication
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Text.RegularExpressions;
+    using System.IO;
+    using System.Net;
+    using System.Net.Sockets;
+    using System.Threading;
+    using System.Collections.Concurrent;
+
     class HL7TCPListener
     {
         const int TCP_TIMEOUT = 300000; // timeout value for receiving TCP data in millseconds
@@ -191,13 +191,14 @@ namespace HL7ListenerApplication
                             messageData = ""; // reset the message data string for the next message
                             string messageTrigger = message.GetMessageTrigger(); 
                             string messageControlID = message.GetHL7Item("MSH-10")[0];
-                            string acceptAckType = message.GetHL7Item("MSH-15")[0];
+                            //string acceptAckType = message.GetHL7Item("MSH-15")[0];
                             string dateStamp = DateTime.Now.Year.ToString() + DateTime.Now.Month.ToString() + DateTime.Now.Day.ToString() + DateTime.Now.Hour.ToString() + DateTime.Now.Minute.ToString();
                             string filename = dateStamp + "_" + (filenameSequenceStart + messageCount).ToString("D6") + "_" + messageTrigger + ".hl7"; //  increment sequence number for each filename
                             // Write the HL7 message to file.
                             WriteMessagetoFile(message.ToString(), this.archivePath + filename);
                             // send ACK message is MSH-15 is set to AL and ACKs not disbaled by -NOACK command line switch
-                            if ((this.sendACK) && (acceptAckType.ToUpper() == "AL"))
+                            //if ((this.sendACK) && (acceptAckType.ToUpper() == "AL"))
+                            if (this.sendACK) 
                             {
                                 LogInformation("Sending ACK (Message Control ID: " + messageControlID + ")");
                                 // generate ACK Message and send in response to the message received

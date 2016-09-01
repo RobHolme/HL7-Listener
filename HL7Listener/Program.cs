@@ -156,7 +156,7 @@ namespace HL7ListenerApplication
         static void Usage()
         {
             Console.WriteLine("");
-            Console.WriteLine(" HL7Listener - v1.1 - Robert Holme. A simple MLLP listener to archive HL7 messages to disk.");
+            Console.WriteLine(" HL7Listener - v1.2 - Robert Holme. A simple MLLP listener to archive HL7 messages to disk.");
             Console.WriteLine(" Usage:");
             Console.WriteLine("");
             Console.ForegroundColor = ConsoleColor.Yellow;
@@ -168,8 +168,7 @@ namespace HL7ListenerApplication
             Console.WriteLine("    -FilePath <Path> The path to archive the received messages to. If no path is supplied, messsages will be saved"); 
             Console.WriteLine("                     to the directory the application is launched from.");
             Console.WriteLine("");
-            Console.WriteLine("    -NoACK prevents ACKs from being sent even if the received messages requests an Accept Acknowledgement");
-            Console.WriteLine("           If the original message does not request an Accept Acknowledgement then no ACK will be sent regardless of this switch.");
+            Console.WriteLine("    -NoACK prevents ACKs from being sent. Without this switch ACKs will always be sent, even if not requested in MSH-15.");
             Console.WriteLine("");
             Console.WriteLine("    -Passthru <host>:<port> Pass all messages received throught to the remote host. eg -Passthru somehost:5000");
             Console.WriteLine("");
