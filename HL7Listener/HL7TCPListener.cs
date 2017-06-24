@@ -192,7 +192,7 @@ namespace HL7ListenerApplication
                             string messageTrigger = message.GetMessageTrigger(); 
                             string messageControlID = message.GetHL7Item("MSH-10")[0];
                             //string acceptAckType = message.GetHL7Item("MSH-15")[0];
-                            string dateStamp = DateTime.Now.Year.ToString() + DateTime.Now.Month.ToString() + DateTime.Now.Day.ToString() + DateTime.Now.Hour.ToString() + DateTime.Now.Minute.ToString();
+                            string dateStamp = DateTime.Now.Year.ToString() + DateTime.Now.Month.ToString().PadLeft(2,'0') + DateTime.Now.Day.ToString().PadLeft(2, '0') + DateTime.Now.Hour.ToString().PadLeft(2, '0') + DateTime.Now.Minute.ToString().PadLeft(2, '0');
                             string filename = dateStamp + "_" + (filenameSequenceStart + messageCount).ToString("D6") + "_" + messageTrigger + ".hl7"; //  increment sequence number for each filename
                             // Write the HL7 message to file.
                             WriteMessagetoFile(message.ToString(), this.archivePath + filename);
