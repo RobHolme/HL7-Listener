@@ -31,5 +31,9 @@ __-NoACK__: suppresses acknowledgement messages from being returned regardless o
 
 e.g.  `HL7Listener -Port 5000 -FilePath c:\test -NoACK`
 
+__-Encoding \<UTF8|ASCII|Latin1\>__: Specify an text encoding method for received messages. Optional - defaults to UTF8.
 
-The file naming convention of the saved  files includes the date time stamp,  and random 6 digit sequence number, and the message trigger. e.g. `201505301529_028615_ADT^A01.hl7`. If multiple messages are received from the same TCP session, the sequence number will increment for each message. If the TCP connection is closed  and reopened for  each message sent, each file name will have a non sequential (random) sequence number.
+ e.g.  `HL7Listener -Port 5000 -FilePath c:\test -Encoding Latin1`
+
+
+The file naming convention of the saved files includes the date time stamp, and random 6 digit sequence number, and the message trigger. e.g. `201505301529_028615_ADT^A01.hl7`. If multiple messages are received from the same TCP session, the sequence number will increment for each message. If the TCP connection is closed  and reopened for each message sent, each file name will have a non sequential (random) sequence number.
