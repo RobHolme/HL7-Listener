@@ -7,6 +7,15 @@ Acknowledgement (ACK) messages will be returned if the message received has the 
 
 HL7Listener supports simultaneous connections from multiple sources. It only supports MLLP framed HL7 messages.
 
+## Build Instructions
+The solution will build versions for .Net 6.0 and .Net Framework 4.52. If you only wish to target .Net standard or .Net Framework alone, the .csproj file will need to be edited accordingly to specify a single TargetFramework.
+1. Install the .Net 6.0 SDK and the .Net Framework 4.52 SDK. Install instructions for the SDK for each platform are available from:
+* Linux: https://docs.microsoft.com/en-us/dotnet/core/linux-prerequisites?tabs=netcore2x
+* Windows: https://docs.microsoft.com/en-us/dotnet/core/windows-prerequisites?tabs=netcore2x
+* MacOS: https://docs.microsoft.com/en-us/dotnet/core/macos-prerequisites?tabs=netcore2x
+1. Open a command console, navigate to the root folder of this solution (containing HL7Listener.csproj). Run the following build command:
+`dotnet build --configuration Release`
+2. The build process will copy a version for each .Net version to subfolders of `bin\release\`.
 ## Running HL7Listener
 
 ```
