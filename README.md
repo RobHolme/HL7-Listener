@@ -19,7 +19,7 @@ The solution will build versions for .Net 6.0 and .Net Framework 4.52. If you on
 ## Running HL7Listener
 
 ```
-HL7Listener.exe -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK]
+HL7Listener.exe -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>]
 ```
 
 ### Parameters
@@ -40,7 +40,7 @@ __-NoACK__: suppresses acknowledgement messages from being returned regardless o
 
 e.g.  `HL7Listener -Port 5000 -FilePath c:\test -NoACK`
 
-__-Encoding \<UTF8|ASCII|Latin1\>__: Specify an text encoding method for received messages. Optional - defaults to UTF8.
+__-Encoding \<UTF8 | ASCII | Latin1\>__: Specify an text encoding method for received messages. Optional - defaults to UTF8.
 
  e.g.  `HL7Listener -Port 5000 -FilePath c:\test -Encoding Latin1`
 
