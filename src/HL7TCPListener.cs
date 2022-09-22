@@ -75,6 +75,7 @@ namespace HL7ListenerApplication {
 			if (!sendACK) {
 				this.LogInformation("# Acknowledgements (ACKs) will not be sent");
 			}
+			this.LogInformation("# TLS: " + this.tlsRequired);
 			// if  a passthru host has been specified, create a new thread to send messages to the PassThru host
 			if (this.passthruHost != null) {
 				// create a connection to the Passthru host if the -PassThru option was specified.
@@ -117,17 +118,19 @@ namespace HL7ListenerApplication {
 		/// </summary>
 		private void StartListener() {
 			try {
-				X509Certificate2 cert = new X509Certificate2(this.tlsCertificatePath);
+				X509Certificate2 cert;
 				this.tcpListener.Start();
 				// run the thread unless a request to stop is received
 				while (this.runThread) {
-					if (tlsRequired) {
+					if (this.tlsRequired) {
+						cert = new X509Certificate2(this.tlsCertificatePath);
 						TcpClient client = this.tcpListener.AcceptTcpClient();
 						this.LogInformation("New client connection accepted from " + client.Client.RemoteEndPoint);
 						SslStream sslStream = new SslStream(client.GetStream());
 						sslStream.AuthenticateAsServer(cert);
 						Thread clientThread = new Thread(new ParameterizedThreadStart(ReceiveData));
 						clientThread.Start(sslStream);
+						cert.Dispose();
 					}
 					else {
 						// waits for a client connection to the listener
@@ -139,7 +142,6 @@ namespace HL7ListenerApplication {
 					}
 
 				}
-				cert.Dispose();
 			}
 			catch (System.Security.Cryptography.CryptographicException e) {
 				LogWarning("An error occurred while attempting import the PFX certificate " + this.tlsCertificatePath);
@@ -147,11 +149,11 @@ namespace HL7ListenerApplication {
 				LogWarning(e.Message);
 				LogWarning("HL7Listener exiting.");
 			}
-			catch (Exception e) {
-				LogWarning("An error occurred while attempting to start the listener on port " + this.listenerPort);
-				LogWarning(e.Message);
-				LogWarning("HL7Listener exiting.");
-			}
+	//		catch (Exception e) {
+	//			LogWarning("An error occurred while attempting to start the listener on port " + this.listenerPort);
+	//			LogWarning(e.Message);
+	//			LogWarning("HL7Listener exiting.");
+	//		}
 		}
 
 

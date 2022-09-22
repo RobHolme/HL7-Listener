@@ -30,6 +30,9 @@ namespace HL7ListenerApplication {
 					listener.PassthruHost = passthruHost;
 					listener.PassthruPort = passthruPort;
 				}
+				if (tlsCertificate != null) {
+					listener.TlsCertificatePath = tlsCertificate;
+				}
 				if (!listener.Start()) {
 					LogWarning("Exiting");
 				}
@@ -150,7 +153,7 @@ namespace HL7ListenerApplication {
 					case "--TLS":
 					case "-S":
 						if (i + 1 < cmdArgs.Length) {
-							if (!System.IO.Directory.Exists(cmdArgs[i + 1])) {
+							if (!System.IO.File.Exists(cmdArgs[i + 1])) {
 								LogWarning("The certificate file " + cmdArgs[i + 1] + " does not exist.");
 								return false;
 							}
@@ -179,7 +182,7 @@ namespace HL7ListenerApplication {
 			Console.WriteLine(" Usage:");
 			Console.WriteLine("");
 			Console.ForegroundColor = ConsoleColor.Yellow;
-			Console.WriteLine(" HL7Listener.exe -Port <PortNumber> [-FilePath <path>] [-NoACK] [-Passthru <host>:<port>]");
+			Console.WriteLine(" HL7Listener.exe -Port <PortNumber> [-FilePath <path>] [-NoACK] [-Passthru <host>:<port>] [-TLS] <certificate-path>");
 			Console.ResetColor();
 			Console.WriteLine("");
 			Console.WriteLine("    -Port <PortNumber> specifies the port to listen on. Must be an integer between 1025 and 65535");
