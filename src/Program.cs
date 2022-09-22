@@ -21,7 +21,7 @@ namespace HL7ListenerApplication {
 			// parse command line arguments
 			if (ParseArgs(args)) {
 				// create a new instance of HL7TCPListener. Set optional properties to rturn ACKs, passthru messages, archive locaiton. Start the listener.
-				HL7TCPListener listener = new HL7TCPListener(port, encoding);
+				HL7TCPListener listener = new HL7TCPListener(port, encoding, useTLS);
 				listener.SendACK = sendACK;
 				if (filePath != null) {
 					listener.FilePath = filePath;
