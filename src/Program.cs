@@ -2,40 +2,35 @@
 // 02/06/2015
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace HL7ListenerApplication
-{
-	class Program
-	{
+namespace HL7ListenerApplication {
+	class Program {
 		private static int port = 5000;
 		private static string filePath = null;
 		private static bool sendACK = true;
 		private static string passthruHost;
 		private static int passthruPort;
 		private static Encoding encoding = Encoding.Default;
+		private static bool useTLS = false;
+		private static string tlsCertificate;
 
-		static void Main(string[] args)
-		{
+
+		static void Main(string[] args) {
 			// parse command line arguments
-			if (ParseArgs(args))
-			{
+			if (ParseArgs(args)) {
 				// create a new instance of HL7TCPListener. Set optional properties to rturn ACKs, passthru messages, archive locaiton. Start the listener.
 				HL7TCPListener listener = new HL7TCPListener(port, encoding);
 				listener.SendACK = sendACK;
-				if (filePath != null)
-				{
+				if (filePath != null) {
 					listener.FilePath = filePath;
 				}
-				if (passthruHost != null)
-				{
+				if (passthruHost != null) {
 					listener.PassthruHost = passthruHost;
 					listener.PassthruPort = passthruPort;
 				}
-				if (!listener.Start())
-				{
+				if (!listener.Start()) {
 					LogWarning("Exiting");
 				}
 			}
@@ -46,43 +41,34 @@ namespace HL7ListenerApplication
 		/// Parse the command line arguements
 		/// </summary>
 		/// <param name="args"></param>
-		static bool ParseArgs(string[] cmdArgs)
-		{
+		static bool ParseArgs(string[] cmdArgs) {
 			// parse command line switches
-			if (cmdArgs.Count() < 2)
-			{
+			if (cmdArgs.Count() < 2) {
 				Usage();
 				return false;
 			}
-			for (int i = 0; i < cmdArgs.Length; i++)
-			{
-				switch (cmdArgs[i].ToUpper())
-				{
+			for (int i = 0; i < cmdArgs.Length; i++) {
+				switch (cmdArgs[i].ToUpper()) {
 					// parse the port parameter
 					case "-PORT":
 					case "-P":
 					case "--PORT":
-						if (i + 1 < cmdArgs.Length)
-						{
-							try
-							{
+						if (i + 1 < cmdArgs.Length) {
+							try {
 								port = int.Parse(cmdArgs[i + 1]);
 							}
 							// catch exceptions if the user enters a non integer values
-							catch (FormatException)
-							{
+							catch (FormatException) {
 								LogWarning("The port number provided needs to be an integer between 1025 and 65535");
 								return false;
 							}
 							// validate the port entered is witin the correct range. 
-							if ((port < 1025) || (port > 65535))
-							{
+							if ((port < 1025) || (port > 65535)) {
 								LogWarning("The port number must be an integer between 1025 and 65535");
 								return false;
 							}
 						}
-						else
-						{
+						else {
 							Usage();
 							return false;
 						}
@@ -91,18 +77,15 @@ namespace HL7ListenerApplication
 					case "-FILEPATH":
 					case "--FILEPATH":
 					case "-F":
-						if (i + 1 < cmdArgs.Length)
-						{
+						if (i + 1 < cmdArgs.Length) {
 							filePath = cmdArgs[i + 1];
 							//  validate the the directory exists
-							if (!System.IO.Directory.Exists(filePath))
-							{
+							if (!System.IO.Directory.Exists(filePath)) {
 								LogWarning("The directory " + filePath + " does not exist");
 								return false;
 							}
 							// append trailing slash if not present
-							if (!(filePath.Substring(filePath.Length - 1, 1) == "\\"))
-							{
+							if (!(filePath.Substring(filePath.Length - 1, 1) == "\\")) {
 								filePath = filePath + "\\";
 							}
 						}
@@ -117,29 +100,23 @@ namespace HL7ListenerApplication
 					case "-PASSTHRU":
 					case "--PASSTHRU":
 					case "-T":
-						if (i + 1 < cmdArgs.Length)
-						{
+						if (i + 1 < cmdArgs.Length) {
 							string[] temp = cmdArgs[i + 1].Split(':');
-							if (temp.Length == 2)
-							{
+							if (temp.Length == 2) {
 								passthruHost = temp[0];
-								try
-								{
+								try {
 									passthruPort = int.Parse(temp[1]);
 								}
-								catch (FormatException)
-								{
+								catch (FormatException) {
 									LogWarning("The port number provided needs to be an integer between 1 and 65535");
 									return false;
 								}
-								if ((passthruPort == 0) || (passthruPort > 65535))
-								{
+								if ((passthruPort == 0) || (passthruPort > 65535)) {
 									LogWarning("The port number provided needs to be an integer between 1 and 65535");
 									return false;
 								}
 							}
-							else
-							{
+							else {
 								LogWarning("The passthru host and IP where not provided. eg -passthru host:port");
 								return false;
 							}
@@ -149,10 +126,8 @@ namespace HL7ListenerApplication
 					case "-ENCODING":
 					case "--ENCODING":
 					case "-E":
-						if (i + 1 < cmdArgs.Length)
-						{
-							switch (cmdArgs[i + 1].ToUpper())
-							{
+						if (i + 1 < cmdArgs.Length) {
+							switch (cmdArgs[i + 1].ToUpper()) {
 								case "ASCII":
 									encoding = Encoding.ASCII;
 									break;
@@ -170,6 +145,25 @@ namespace HL7ListenerApplication
 							}
 						}
 						break;
+					// require TLS for connections from clients
+					case "-TLS":
+					case "--TLS":
+					case "-S":
+						if (i + 1 < cmdArgs.Length) {
+							if (!System.IO.Directory.Exists(cmdArgs[i + 1])) {
+								LogWarning("The certificate file " + cmdArgs[i + 1] + " does not exist.");
+								return false;
+							}
+							else {
+								useTLS = true;
+								tlsCertificate = cmdArgs[i + 1];
+							}
+						}
+						else {
+							LogWarning("The path to the server TLS certificate was not provided. e.g. -TLS c:\\server.pfx");
+							return false;
+						}
+						break;
 				}
 			}
 			return true;
@@ -179,10 +173,9 @@ namespace HL7ListenerApplication
 		/// <summary>
 		/// Display help on command line parameters
 		/// </summary>
-		static void Usage()
-		{
+		static void Usage() {
 			Console.WriteLine("");
-			Console.WriteLine(" HL7Listener - v1.3 - Robert Holme. A simple MLLP listener to archive HL7 messages to disk.");
+			Console.WriteLine(" HL7Listener - v1.4 - Robert Holme. A simple MLLP listener to archive HL7 messages to disk.");
 			Console.WriteLine(" Usage:");
 			Console.WriteLine("");
 			Console.ForegroundColor = ConsoleColor.Yellow;
@@ -200,14 +193,15 @@ namespace HL7ListenerApplication
 			Console.WriteLine("");
 			Console.WriteLine("    -Encoding <UTF8|Latin1|ASCII> Optionally define the text encoding for received messages. Defaults to system default encoding (UTF8).");
 			Console.WriteLine("");
+			Console.WriteLine("    -TLS <certificate.pfx> Require for TLS protected connections. Provide server certificate (PFX format)");
+			Console.WriteLine("");
 		}
 
 		/// <summary>
 		/// Write a warning message to the console
 		/// </summary>
 		/// <param name="message"></param>
-		static void LogWarning(string message)
-		{
+		static void LogWarning(string message) {
 			Console.ForegroundColor = ConsoleColor.Yellow;
 			Console.WriteLine("WARNING: " + message);
 			Console.ResetColor();
