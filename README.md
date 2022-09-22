@@ -1,7 +1,7 @@
 # HL7Listener
 
 ## Project Description
-This is a command line application that listens for MLLP framed HL7 messages.  Any HL7 messages received are written to disk. This is intended as a simple diagnostic app to capture a stream of HL7 messages to disk for offline analysis/troubleshooting.
+This is a command line application that listens for MLLP framed HL7 messages.  Any HL7 messages received are written to disk. This is intended as a simple diagnostic app to capture a stream of HL7 messages to disk for offline analysis/troubleshooting. Not intended for production use.
 
 Acknowledgement (ACK) messages will be returned if the message received has the Accept-Acknowledgement field (MSH-15) set to `AL` . If this is not set, no ACK will be returned.  Additionally, ACKs can be prevented from being returned in all cases if the `-NoACK` command line switch is specified. 
 
@@ -19,7 +19,7 @@ The solution will build versions for .Net 6.0 and .Net Framework 4.52. If you on
 ## Running HL7Listener
 
 ```
-HL7Listener.exe -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>]
+HL7Listener.exe -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>] [-TLS <certificate>]
 ```
 
 ### Parameters
@@ -28,7 +28,7 @@ __-Port \<port-number\>__: specifies the TCP port to listen for incoming connect
 
 e.g. `HL7Listener -Port 5000`
 
-__-FilePath \<path\>__:  Specifies the location to save the HL7 messages to. If no path is provided, the messagges will be saved to the current path of the console session that ran the application. 
+__-FilePath \<path\>__:  Specifies the location to save the HL7 messages to. If no path is provided, the messages will be saved to the current path of the console session that ran the application. 
 
 e.g.  `HL7Listener -Port 5000 -FilePath c:\HL7\saved-messsages`
 
@@ -44,5 +44,6 @@ __-Encoding \<UTF8 | ASCII | Latin1\>__: Specify an text encoding method for rec
 
  e.g.  `HL7Listener -Port 5000 -FilePath c:\test -Encoding Latin1`
 
+__-TLS \<certificate-path\>__: Require clients to connect using TLS. \<certificate-path\> should refer to a file containing a PFX (PKS12) certificate. User will be prompted for the certificate password (enter for no password). The TLS encryption will only apply to connections from remote clients, it will not apply to -PassThru connections.
 
 The file naming convention of the saved files includes the date time stamp, and random 6 digit sequence number, and the message trigger. e.g. `201505301529_028615_ADT^A01.hl7`. If multiple messages are received from the same TCP session, the sequence number will increment for each message. If the TCP connection is closed  and reopened for each message sent, each file name will have a non sequential (random) sequence number.
