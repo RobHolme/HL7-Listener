@@ -16,7 +16,6 @@ namespace HL7ListenerApplication {
 		private static bool useTLS = false;
 		private static string tlsCertificate;
 
-
 		static void Main(string[] args) {
 			// parse command line arguments
 			if (ParseArgs(args)) {

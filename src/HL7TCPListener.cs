@@ -8,6 +8,7 @@ namespace HL7ListenerApplication {
 	using System.Net;
 	using System.Net.Security;
 	using System.Net.Sockets;
+	using System.Security;
 	using System.Threading;
 	using System.Collections.Concurrent;
 	using System.Security.Cryptography.X509Certificates;
@@ -31,7 +32,7 @@ namespace HL7ListenerApplication {
 		private Encoding encoder = Encoding.Default;
 		private bool tlsRequired = false;
 		private string tlsCertificatePath;
-		protected ManualResetEvent tcpClientConnected = new ManualResetEvent(false);
+		private SecureString certPassword;
 
 		/// <summary>
 		/// Constructor
@@ -62,6 +63,9 @@ namespace HL7ListenerApplication {
 		/// Start the TCP listener. Log the options set.
 		/// </summary>
 		public bool Start() {
+			if (this.tlsRequired) {
+				certPassword = GetPassword();
+			}
 			// start a new thread to listen for new TCP connections
 			this.tcpListener = new TcpListener(IPAddress.Any, this.listenerPort);
 			this.tcpListenerThread = new Thread(new ThreadStart(StartListener));
@@ -122,15 +126,10 @@ namespace HL7ListenerApplication {
 				// run the thread unless a request to stop is received
 				while (this.runThread) {
 					if (this.tlsRequired) {
-						//						cert = new X509Certificate2(this.tlsCertificatePath);
 						TcpClient client = this.tcpListener.AcceptTcpClient();
 						this.LogInformation("New client connection accepted from " + client.Client.RemoteEndPoint);
-						//						SslStream sslStream = new SslStream(client.GetStream());
-						//						sslStream.AuthenticateAsServer(cert);
 						Thread clientThread = new Thread(new ParameterizedThreadStart(ReceiveTLSData));
 						clientThread.Start(client);
-						//						cert.Dispose();
-						//						client.Close();
 					}
 					else {
 						// waits for a client connection to the listener
@@ -255,7 +254,7 @@ namespace HL7ListenerApplication {
 			int filenameSequenceStart = random.Next(0, 1000000);
 
 			try {
-				X509Certificate2 cert = new X509Certificate2(this.tlsCertificatePath);
+				X509Certificate2 cert = new X509Certificate2(this.tlsCertificatePath, this.certPassword);
 				TcpClient tcpClient = (TcpClient)client;
 				SslStream clientStream = new SslStream(tcpClient.GetStream());
 				clientStream.ReadTimeout = TCP_TIMEOUT;
@@ -483,6 +482,40 @@ namespace HL7ListenerApplication {
 				}
 			}
 		}
+
+		/// <summary>
+		/// read a secure string (password) from the console. 
+		/// </summary>
+		private SecureString GetPassword() {
+			// prompt user to enter password
+			Console.ForegroundColor = ConsoleColor.Yellow;
+			Console.WriteLine("");
+			Console.WriteLine("Enter password for certificate (enter for no password):");
+			Console.ResetColor();
+
+			// read password entered into a secure string
+			SecureString password = new SecureString();
+			while (true) {
+				ConsoleKeyInfo info = Console.ReadKey(true);
+				if (info.Key == ConsoleKey.Enter) {
+					Console.WriteLine("");
+					break;
+				}
+				else if (info.Key == ConsoleKey.Backspace) {
+					if (password.Length > 0) {
+						password.RemoveAt(password.Length - 1);
+						Console.Write("\b \b");
+					}
+				}
+				// KeyChar == '\u0000' if the key pressed does not correspond to a printable character
+				else if (info.KeyChar != '\u0000') {
+					password.AppendChar(info.KeyChar);
+					Console.Write("*");
+				}
+			}
+			return password;
+		}
+
 
 		/// <summary>
 		/// Set and get the values of the SendACK option. This can be used to override sending of ACK messages. 
