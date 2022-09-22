@@ -149,11 +149,11 @@ namespace HL7ListenerApplication {
 				LogWarning(e.Message);
 				LogWarning("HL7Listener exiting.");
 			}
-	//		catch (Exception e) {
-	//			LogWarning("An error occurred while attempting to start the listener on port " + this.listenerPort);
-	//			LogWarning(e.Message);
-	//			LogWarning("HL7Listener exiting.");
-	//		}
+			catch (Exception e) {
+				LogWarning("An error occurred while attempting to start the listener on port " + this.listenerPort);
+				LogWarning(e.Message);
+				LogWarning("HL7Listener exiting.");
+			}
 		}
 
 
