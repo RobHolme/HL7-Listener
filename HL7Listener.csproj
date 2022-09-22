@@ -3,14 +3,14 @@
   <PropertyGroup>
   	<AssemblyName>HL7Listener</AssemblyName>
 	<OutputType>Exe</OutputType>
-    <TargetFrameworks>net6.0;net452</TargetFrameworks>
+    <TargetFrameworks>net6.0;net48</TargetFrameworks>
 	<EnableDefaultItems>true</EnableDefaultItems>
 	<PlatformTarget>x64</PlatformTarget>
 	<Authors>Rob Holme</Authors>
 	<Product>HL7 Listener</Product>
     <Description>Simple MLLP listener to accept HL7 v2.x messages</Description>
-	<Version>1.3.0</Version>
-    <FileVersion>1.3.0.0</FileVersion>
+	<Version>1.4.0</Version>
+    <FileVersion>1.4.0.0</FileVersion>
 	<RepositoryUrl>https://github.com/RobHolme/HL7-Listener</RepositoryUrl>
   </PropertyGroup>
 </Project>
