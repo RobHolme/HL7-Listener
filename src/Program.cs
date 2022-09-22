@@ -20,7 +20,7 @@ namespace HL7ListenerApplication {
 		static void Main(string[] args) {
 			// parse command line arguments
 			if (ParseArgs(args)) {
-				// create a new instance of HL7TCPListener. Set optional properties to rturn ACKs, passthru messages, archive locaiton. Start the listener.
+				// create a new instance of HL7TCPListener. Set optional properties to return ACKs, passthru messages, archive location. Start the listener.
 				HL7TCPListener listener = new HL7TCPListener(port, encoding, useTLS);
 				listener.SendACK = sendACK;
 				if (filePath != null) {
@@ -41,7 +41,7 @@ namespace HL7ListenerApplication {
 
 
 		/// <summary>
-		/// Parse the command line arguements
+		/// Parse the command line arguments
 		/// </summary>
 		/// <param name="args"></param>
 		static bool ParseArgs(string[] cmdArgs) {
@@ -65,7 +65,7 @@ namespace HL7ListenerApplication {
 								LogWarning("The port number provided needs to be an integer between 1025 and 65535");
 								return false;
 							}
-							// validate the port entered is witin the correct range. 
+							// validate the port entered is within the correct range. 
 							if ((port < 1025) || (port > 65535)) {
 								LogWarning("The port number must be an integer between 1025 and 65535");
 								return false;
