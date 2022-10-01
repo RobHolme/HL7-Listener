@@ -11,18 +11,18 @@ using System.Text.RegularExpressions;
 namespace HL7ListenerApplication
 {
     
-    // this provides basic access to a HL7 message. It is stored as string array of segments, no awarness of the message schema.
+    // this provides basic access to a HL7 message. It is stored as string array of segments, no awareness of the message schema.
     class HL7Message
     {
         private string[] segments;
         private string message;
-        private char fieldDelimeter;
-        private char componentDelimeter;
-        private char subComponentDelimer;
-        private char repeatDelimeter;
+        private char fieldDelimiter;
+        private char componentDelimiter;
+        private char subComponentDelimiter;
+        private char repeatDelimiter;
         
         /// <summary>
-        /// Constructor. Set the field, component, subcompoenent and repeat delimeters. Throw an exception if the messsage  does not include a MSH segment.
+        /// Constructor. Set the field, component, subcomponent and repeat delimiters. Throw an exception if the message  does not include a MSH segment.
         /// </summary>
         /// <param name="message"></param>
         public HL7Message(string Message)
@@ -30,15 +30,15 @@ namespace HL7ListenerApplication
 
             message = Message;
             segments = Message.Split((char)0x0D);
-            // set the field, component, sub component and repeat delimters
+            // set the field, component, sub component and repeat delimiters
             int startPos = message.IndexOf("MSH");
             if (startPos >= 0)
             {
                 startPos = startPos + 2; 
-                this.fieldDelimeter = message[startPos + 1];
-                this.componentDelimeter = message[startPos + 2];
-                this.repeatDelimeter = message[startPos + 3];
-                this.subComponentDelimer = message[startPos + 5];
+                this.fieldDelimiter = message[startPos + 1];
+                this.componentDelimiter = message[startPos + 2];
+                this.repeatDelimiter = message[startPos + 3];
+                this.subComponentDelimiter = message[startPos + 5];
             }
             // throw an exception if a MSH segment is not included in the message. 
             else
@@ -49,37 +49,37 @@ namespace HL7ListenerApplication
 
 
         /// <summary>
-        /// returns th field delimeter character
+        /// returns th field delimiter character
         /// </summary>
-        public char FieldDelimeter
+        public char FieldDelimiter
         {
-            get {return this.fieldDelimeter;}
+            get {return this.fieldDelimiter;}
         }
 
         /// <summary>
-        /// returns the component delimeter character
+        /// returns the component delimiter character
         /// </summary>
-        public char ComponentDelimter
+        public char ComponentDelimiter
         {
-            get { return this.componentDelimeter; }
-        }
-
-
-        /// <summary>
-        /// returns the sub component delimeter character
-        /// </summary>
-        public char SubcomponentDelimer
-        {
-            get { return this.subComponentDelimer; }
+            get { return this.componentDelimiter; }
         }
 
 
         /// <summary>
-        /// return the repeat delimeter character
+        /// returns the sub component delimiter character
         /// </summary>
-        public char RepeatDelimeter
+        public char SubcomponentDelimiter
         {
-            get { return this.repeatDelimeter; }
+            get { return this.subComponentDelimiter; }
+        }
+
+
+        /// <summary>
+        /// return the repeat delimiter character
+        /// </summary>
+        public char RepeatDelimiter
+        {
+            get { return this.repeatDelimiter; }
         }
 
         
@@ -94,7 +94,7 @@ namespace HL7ListenerApplication
 
 
         /// <summary>
-        /// return the value for the coresponding HL7 item. HL7LocationString is formatted as Segment-Field.Componet.SubComponent eg PID-3 or PID-5.1.1
+        /// return the value for the corresponding HL7 item. HL7LocationString is formatted as Segment-Field.Component.SubComponent eg PID-3 or PID-5.1.1
         /// </summary>
         /// <param name="HL7LocationString"></param>
         /// <returns></returns>
@@ -107,7 +107,7 @@ namespace HL7ListenerApplication
             uint segmentRepeatNumber;
             uint fieldRepeatNumber;
 
-            if (GetElementPosition(HL7LocationString, out segmentName, out segmentRepeatNumber, out fieldNumber, out fieldRepeatNumber, out componentNumber, out subcomponentNumber)) // GetElement possition return null if the string is not formatted correctly
+            if (GetElementPosition(HL7LocationString, out segmentName, out segmentRepeatNumber, out fieldNumber, out fieldRepeatNumber, out componentNumber, out subcomponentNumber)) // GetElement position return null if the string is not formatted correctly
             {
                 if (subcomponentNumber != 0) // segment, field, component and sub component
                 {
@@ -125,7 +125,7 @@ namespace HL7ListenerApplication
                 {
                     return GetValue(segmentName, segmentRepeatNumber);
                 }
-                else // this should be redundant, if a value was returned from GetElementPossition it would match one of the earlier if / else if statements.
+                else // this should be redundant, if a value was returned from GetElementPosition it would match one of the earlier if / else if statements.
                 {
                     return null;
                 }
@@ -139,7 +139,7 @@ namespace HL7ListenerApplication
 
 
         /// <summary>
-        /// Return the segments matchting SegmentID. Return as a string array as there may be more than one segment.
+        /// Return the segments matching SegmentID. Return as a string array as there may be more than one segment.
         /// </summary>
         /// <param name="SegmentID"></param>
         /// <param name="SegmentRepeatNumber"></param>
@@ -154,13 +154,13 @@ namespace HL7ListenerApplication
                 if (Regex.IsMatch(currentLine, "^" + SegmentID, RegexOptions.IgnoreCase)) //search for the segment ID at the start of a line.
                 {
                     numberOfSegments++;
-                    // if a SegmentRepeaNumber is provided, only add a segment for this specific repeat. Keep cound of the number of segments found.
+                    // if a SegmentRepeatNumber is provided, only add a segment for this specific repeat. Keep cound of the number of segments found.
                     if (SegmentRepeatNumber > 0)
                     {
                         if (SegmentRepeatNumber == numberOfSegments)
                         {
                             segmentsToReturn.Add(currentLine);
-                            return segmentsToReturn.ToArray(); // return immediatly, only one segment returned if user specifies a particular segment repeat.
+                            return segmentsToReturn.ToArray(); // return immediately, only one segment returned if user specifies a particular segment repeat.
                         }
                     }
                     // add all repeats if SegmentRepeatNumber = 0 (ie not provided).
@@ -190,19 +190,19 @@ namespace HL7ListenerApplication
             // get the segment requested
             string[] segments = GetValue(SegmentID, SegmentRepeatNumber);
             // from the segments returned above, look for the fields requested
-            if (SegmentID.ToUpper() == "MSH") // MSH segments are a special case, due to MSH-1 being the field delimter character itself.
+            if (SegmentID.ToUpper() == "MSH") // MSH segments are a special case, due to MSH-1 being the field delimiter character itself.
             {
-                FieldID = FieldID - 1; // when splitting MSH segments, MSH-1 is the chracter used in the split, so field numbers won't match the array possition of the split segments as is the case with all other segments.
+                FieldID = FieldID - 1; // when splitting MSH segments, MSH-1 is the character used in the split, so field numbers won't match the array position of the split segments as is the case with all other segments.
                 if (FieldID == 0) // ie MSH-1
                 {
-                    fieldsToReturn.Add(fieldDelimeter.ToString()); // return the field demiter if looking for MSH-1
+                    fieldsToReturn.Add(fieldDelimiter.ToString()); // return the field delimiter if looking for MSH-1
                     return fieldsToReturn.ToArray();
                 }
                 if (FieldID == 1) // i.e MSH-2
                 {
                     if (segments.Length > 0) // make sure a MSH segment was found, otherwise an array out of bound exception would be thrown.
                     {
-                        fieldsToReturn.Add(segments[0].ToString().Substring(4, 4)); // special case for MSH-2 as this field contains the repeat demiter. If this is not handled here, the field would be incorrectly treated as a repeating field.
+                        fieldsToReturn.Add(segments[0].ToString().Substring(4, 4)); // special case for MSH-2 as this field contains the repeat delimiter. If this is not handled here, the field would be incorrectly treated as a repeating field.
                         return fieldsToReturn.ToArray();
                     }
                 }
@@ -211,12 +211,12 @@ namespace HL7ListenerApplication
             for (int i = 0; i < segments.Count(); i++)
             {
                 string currentField;
-                fields = segments[i].Split(fieldDelimeter);
+                fields = segments[i].Split(fieldDelimiter);
                 if (FieldID < fields.Length)
                 {
-                    if (fields[FieldID].Contains(repeatDelimeter.ToString()))
+                    if (fields[FieldID].Contains(repeatDelimiter.ToString()))
                     {
-                        repeatingFields = fields[FieldID].Split(repeatDelimeter);
+                        repeatingFields = fields[FieldID].Split(repeatDelimiter);
                         for (uint j = 0; j < repeatingFields.Count(); j++)
                         {
                             currentField = repeatingFields[j];
@@ -251,7 +251,7 @@ namespace HL7ListenerApplication
 
 
         /// <summary>
-        /// Return the componets matching SegmentID. Return as a string array as the segment may belong to a repeating field or repeating segment.
+        /// Return the components matching SegmentID. Return as a string array as the segment may belong to a repeating field or repeating segment.
         /// </summary>
         /// <param name="SegmentID"></param>
         /// <param name="FieldID"></param>
@@ -266,10 +266,10 @@ namespace HL7ListenerApplication
 
             // get the field requested
             string[] fields = GetValue(SegmentID, FieldID, SegmentRepeatNumber, FieldRepeatNumber);
-            // from the list of fields returned, look for the componeent requested.
+            // from the list of fields returned, look for the component requested.
             for (int i = 0; i < fields.Count(); i++)
             {
-                components = fields[i].Split(componentDelimeter);
+                components = fields[i].Split(componentDelimiter);
                 if ((components.Count() >= ComponentID) && (components.Count() > 1))
                 {
                     componentsToReturn.Add(components[ComponentID - 1]);
@@ -280,7 +280,7 @@ namespace HL7ListenerApplication
 
 
         /// <summary>
-        /// Return the sub components matching SubComponetID. Return as a string array as the sub component may belong to a repeating field or repeating segment.
+        /// Return the sub components matching SubComponentID. Return as a string array as the sub component may belong to a repeating field or repeating segment.
         /// </summary>
         /// <param name="SegmentID"></param>
         /// <param name="FieldID"></param>
@@ -299,7 +299,7 @@ namespace HL7ListenerApplication
             // from the component(s) returned above look for the subcomponent requested
             for (int i = 0; i < components.Count(); i++)
             {
-                subComponents = components[i].Split(this.subComponentDelimer);
+                subComponents = components[i].Split(this.subComponentDelimiter);
                 if ((subComponents.Count() >= SubComponentID) && (subComponents.Count() > 1)) // make sure the subComponentID requested exists in the array before requesting it. 
                 {
                     subComponentsToReturn.Add(subComponents[SubComponentID - 1]);
@@ -348,7 +348,7 @@ namespace HL7ListenerApplication
                     string tmpStr = checkRepeatingFieldNumber.Value.Split('[')[1];
                     FieldRepeat = UInt32.Parse(tmpStr.Split(']')[0]);
                 }
-                // retrieve the field, component and sub componnent values. If they don't exist, set to 0
+                // retrieve the field, component and sub component values. If they don't exist, set to 0
                 tempString = HL7LocationString.Split('-');
                 Segment = tempString[0].Substring(0, 3); // the segment name
                 if (tempString.Count() > 1) // confirm values other than the segment were provided.
@@ -362,7 +362,7 @@ namespace HL7ListenerApplication
                     {
                         Component = UInt32.Parse(tempString2[1]);
                     }
-                    if (tempString2.Count() == 3) // field, compoment and sub component exist. Set the value of thesub component.
+                    if (tempString2.Count() == 3) // field, component and sub component exist. Set the value of the subcomponent.
                     {
                         SubComponent = UInt32.Parse(tempString2[2]);
                     }
