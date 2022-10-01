@@ -74,9 +74,6 @@ namespace HL7ListenerApplication {
 		/// Start the TCP listener. Log the options set.
 		/// </summary>
 		public bool Start() {
-			if (this.tlsRequired) {
-				certPassword = GetPassword();
-			}
 			// start a new thread to listen for new TCP connections
 			this.tcpListener = new TcpListener(IPAddress.Any, this.listenerPort);
 			this.tcpListenerThread = new Thread(new ThreadStart(StartListener));
@@ -352,7 +349,7 @@ namespace HL7ListenerApplication {
 				clientStream.Dispose();
 				tcpClient.Close();
 				tcpClient.Dispose();
-				cert.Dispose();
+//				this.certificate.Dispose();
 			}
 			catch (Exception e) {
 				LogWarning("An error occurred while attempting to negotiate TLS.");

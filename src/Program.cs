@@ -25,10 +25,10 @@ namespace HL7ListenerApplication {
 				// create a new instance of HL7TCPListener. Set optional properties to return ACKs, passthru messages, archive location. Start the listener.
 				HL7TCPListener listener;
 				if (useTLS) {
-					listener = new HL7TCPListener(this.port, this.encoding, this.certificate);
+					listener = new HL7TCPListener(port, encoding, certificate);
 				}
 				else {
-					listener = new HL7TCPListener(this.port, this.encoding);
+					listener = new HL7TCPListener(port, encoding);
 				}
 				listener.SendACK = sendACK;
 				if (passthruHost != null) {
@@ -154,26 +154,28 @@ namespace HL7ListenerApplication {
 					case "-TLS":
 					case "--TLS":
 					case "-S":
+						LogInformation("TLS option detected");
 						if (i + 1 < cmdArgs.Length) {
 							// check for SHA1 certificate thumbprint
 							if (Regex.IsMatch(cmdArgs[i + 1], "^[A-Z0-9]{40}$", RegexOptions.IgnoreCase)) {
+								LogInformation("Certificate thumbprint detected - " + cmdArgs[i + 1]);
 								// exit if a cert store certificate thumbprint was provided in a non Windows platform
-								if (Environment.OSVersion.platform != Win32NT) {
+								if (Environment.OSVersion.Platform != System.PlatformID.Win32NT) {
 									LogWarning("Using a certificate from the certificate store is only supported on a Windows platform.");
 									return false;
 								}
 								useTLS = true;
 								string tlsCertificateThumbprint = cmdArgs[i + 1];
-								this.certificate = GetCertificateFromCertStore(tlsCertificateThumbprint);
-								if (this.certificate == null) {
+								certificate = GetCertificateFromCertStore(tlsCertificateThumbprint);
+								if (certificate == null) {
 										LogWarning("An error occurred while attempting read the certificate from the Windows cert store");
 										LogWarning("Make sure the certificate thumbprint is correct.");
-										LogWarning(e.Message);
 										return false;
 								}
 							}
 							// otherwise assume a file path has been provided, check that it is a valid file
 							else {
+								LogInformation("Certificate filename detected - " + cmdArgs[i + 1]);
 								if (!System.IO.File.Exists(cmdArgs[i + 1])) {
 									LogWarning("The certificate file " + cmdArgs[i + 1] + " does not exist.");
 									return false;
@@ -182,9 +184,9 @@ namespace HL7ListenerApplication {
 									useTLS = true;
 									string tlsCertificatePath = cmdArgs[i + 1];
 									SecureString certPassword = GetPassword();
-									this.certificate = GetCertificateFromFile(tlsCertificatePath, certPassword);
-									if (this.certificate == null) {
-										LogWarning("An error occurred while attempting import the PFX certificate " + this.tlsCertificatePath);
+									certificate = GetCertificateFromFile(tlsCertificatePath, certPassword);
+									if (certificate == null) {
+										LogWarning("An error occurred while attempting import the PFX certificate " + tlsCertificatePath);
 										LogWarning("Make sure the certificate is in PFX format and password is correct.");
 										return false;
 									}
@@ -205,12 +207,12 @@ namespace HL7ListenerApplication {
 		/// <summary>
 		/// Construct a x509 certificate from a file. Return null if certificate could not be created.
 		/// </summary>
-		private GetCertificateFromFile(string certFilePath, SecureString certPassword) {
+		private static X509Certificate2 GetCertificateFromFile(string certFilePath, SecureString certPassword) {
 			try {
 				X509Certificate2 cert = new X509Certificate2(certFilePath, certPassword);
 				return cert;
 			}
-			catch {
+			catch (Exception e) {
 				LogWarning(e.Message);
 				return null;
 			}
@@ -219,7 +221,7 @@ namespace HL7ListenerApplication {
 		/// <summary>
 		/// obtain a x509 certificate from the Windows CertStore matching a SHA1 thumbprint . 
 		/// </summary>
-		private GetCertificateFromCertStore(string Thumbprint) {
+		private static X509Certificate2 GetCertificateFromCertStore(string Thumbprint) {
 			try {
 				X509Certificate2Collection CertCollection;
 				// try local machine store first
@@ -236,14 +238,14 @@ namespace HL7ListenerApplication {
 					cuCertStore.Close();
 
 					// no certs found in either store, return null
-					if (0 == .Count) {
+					if (0 == CertCollection.Count) {
 						return null;
 					}
 				}
 				// return the first cert found - searching on thumbprint so chance of thumbprint collision is low
 				return CertCollection[0];		
 			}
-			catch  {
+			catch (Exception e)  {
 				LogWarning(e.Message);
 				return null;
 			}
@@ -252,7 +254,7 @@ namespace HL7ListenerApplication {
 		/// <summary>
 		/// read a secure string (password) from the console. 
 		/// </summary>
-		private SecureString GetPassword() {
+		private static SecureString GetPassword() {
 			// prompt user to enter password
 			Console.ForegroundColor = ConsoleColor.Yellow;
 			Console.WriteLine("");
@@ -286,7 +288,7 @@ namespace HL7ListenerApplication {
 		/// <summary>
 		/// Display help on command line parameters
 		/// </summary>
-		static void Usage() {
+		private static void Usage() {
 			Console.WriteLine("");
 			Console.WriteLine(" HL7Listener - v1.4 - Robert Holme. A simple MLLP listener to archive HL7 messages to disk.");
 			Console.WriteLine("");
@@ -314,10 +316,15 @@ namespace HL7ListenerApplication {
 		/// Write a warning message to the console
 		/// </summary>
 		/// <param name="message"></param>
-		static void LogWarning(string message) {
+		private static void LogWarning(string message) {
 			Console.ForegroundColor = ConsoleColor.Yellow;
 			Console.WriteLine("WARNING: " + message);
 			Console.ResetColor();
+		}
+
+
+		private static void LogInformation(string message) {
+			Console.WriteLine("INFO: " + message);
 		}
 	}
 }
