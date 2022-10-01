@@ -205,7 +205,7 @@ namespace HL7ListenerApplication {
 							string messageTrigger = message.GetMessageTrigger();
 							string messageControlID = message.GetHL7Item("MSH-10")[0];
 							//string acceptAckType = message.GetHL7Item("MSH-15")[0];
-							string dateStamp = DateTime.Now.Year.ToString() + DateTime.Now.Month.ToString().PadLeft(2, '0') + DateTime.Now.Day.ToString().PadLeft(2, '0') + DateTime.Now.Hour.ToString().PadLeft(2, '0') + DateTime.Now.Minute.ToString().PadLeft(2, '0');
+							string dateStamp = DateTime.Now.ToString("yyyyMMddhhmm");
 							string filename = dateStamp + "_" + (filenameSequenceStart + messageCount).ToString("D6") + "_" + messageTrigger + ".hl7"; //  increment sequence number for each filename
 																																					   // Write the HL7 message to file.
 							WriteMessageToFile(message.ToString(), this.archivePath + filename);
@@ -303,7 +303,7 @@ namespace HL7ListenerApplication {
 								string messageTrigger = message.GetMessageTrigger();
 								string messageControlID = message.GetHL7Item("MSH-10")[0];
 								//string acceptAckType = message.GetHL7Item("MSH-15")[0];
-								string dateStamp = DateTime.Now.Year.ToString() + DateTime.Now.Month.ToString().PadLeft(2, '0') + DateTime.Now.Day.ToString().PadLeft(2, '0') + DateTime.Now.Hour.ToString().PadLeft(2, '0') + DateTime.Now.Minute.ToString().PadLeft(2, '0');
+								string dateStamp = DateTime.Now.ToString("yyyyMMddhhmm");
 								string filename = dateStamp + "_" + (filenameSequenceStart + messageCount).ToString("D6") + "_" + messageTrigger + ".hl7"; //  increment sequence number for each filename
 																																						   // Write the HL7 message to file.
 								WriteMessageToFile(message.ToString(), this.archivePath + filename);
@@ -436,7 +436,7 @@ namespace HL7ListenerApplication {
 			string messageID = tmpMsg.GetHL7Item("MSH-10")[0];
 			string processingID = tmpMsg.GetHL7Item("MSH-11")[0];
 			string hl7Version = tmpMsg.GetHL7Item("MSH-12")[0];
-			string ackTimestamp = DateTime.Now.Year.ToString() + DateTime.Now.Month.ToString() + DateTime.Now.Day.ToString() + DateTime.Now.Hour.ToString() + DateTime.Now.Minute.ToString();
+			string ackTimestamp = DateTime.Now.ToString("yyyyMMddhhmm");
 
 			StringBuilder ACKString = new StringBuilder();
 			ACKString.Append((char)0x0B);
