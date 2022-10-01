@@ -450,7 +450,7 @@ namespace HL7ListenerApplication {
 
 
 		/// <summary>
-		/// Recieve ACKs from the PassThru host.
+		/// Receive ACKs from the PassThru host.
 		/// Run this in a thread as this will block execution waiting for a response.
 		/// </summary>
 		private void ReceiveACK() {
