@@ -28,13 +28,13 @@ __-Port \<port-number\>__: specifies the TCP port to listen for incoming connect
 
 e.g. `HL7Listener -Port 5000`
 
-__-FilePath \<path\>__:  Specifies the location to save the HL7 messages to. If no path is provided, the messagges will be saved to the current path of the console session that ran the application. 
+__-FilePath \<path\>__:  Specifies the location to save the HL7 messages to. If no path is provided, the messages will be saved to the current path of the console session that ran the application. 
 
-e.g.  `HL7Listener -Port 5000 -FilePath c:\HL7\saved-messsages`
+e.g.  `HL7Listener -Port 5000 -FilePath c:\HL7\saved-messages`
 
 __-PassThru \<host\>:\<port\>__: Pass any messages received onto the remote host after saving the messages to disk. 
 
-e.g. `HL7Listener -Port 5000 -FilePath c:\HL7\saved-messsages -passthru 192.168.0.50:6000`
+e.g. `HL7Listener -Port 5000 -FilePath c:\HL7\saved-messages -passthru 192.168.0.50:6000`
 
 __-NoACK__: suppresses acknowledgement messages from being returned regardless of the Accept-Acknowledgement value in the message received.  
 
