@@ -8,7 +8,6 @@ namespace HL7ListenerApplication {
 	using System.Net;
 	using System.Net.Security;
 	using System.Net.Sockets;
-	using System.Security;
 	using System.Threading;
 	using System.Collections.Concurrent;
 	using System.Security.Cryptography.X509Certificates;
@@ -25,15 +24,14 @@ namespace HL7ListenerApplication {
 		private string passthruHost = null;
 		private int passthruPort;
 		private NetworkStream PassthruClientStream;
-		private TcpClient passthruClient; // new TcpClient();
-		private IPEndPoint remoteEndpoint;// = new IPEndPoint(IPAddress.Parse(this.PassthruHost), this.passthruPort);
+		private TcpClient passthruClient; 
+		private IPEndPoint remoteEndpoint;
 		private ConcurrentQueue<string> messageQueue = new ConcurrentQueue<string>();
 		private bool runThread = true;
 		private Encoding encoder = Encoding.Default;
 		private bool tlsRequired = false;
-		private string tlsCertificatePath;
-		private string tlsCertificateThumbprint;
-		private SecureString certPassword;
+		private X509Certificate2 certificate;
+
 
 		/// <summary>
 		/// Constructor
@@ -41,23 +39,35 @@ namespace HL7ListenerApplication {
 		public HL7TCPListener(int port) {
 			this.listenerPort = port;
 			this.tlsRequired = false;
+			this.certificate = null;
 		}
 
 		/// <summary>
-		/// Constructor
+		/// Constructor - define encoding
 		/// </summary>
 		public HL7TCPListener(int port, Encoding encoding) {
 			this.listenerPort = port;
 			this.encoder = encoding;
+			this.certificate = null;
 		}
 
 		/// <summary>
-		/// Constructor
+		/// Constructor - supply certificate to use TLS
 		/// </summary>
-		public HL7TCPListener(int port, Encoding encoding, bool useTLS) {
+		public HL7TCPListener(int port, X509Certificate2 certificate) {
+			this.listenerPort = port;
+			this.tlsRequired = true;
+			this.certificate = certificate;
+		}
+
+		/// <summary>
+		/// Constructor - supply certificate to use TLS, define encoding
+		/// </summary>
+		public HL7TCPListener(int port, Encoding encoding, X509Certificate2 certificate) {
 			this.listenerPort = port;
 			this.encoder = encoding;
-			this.tlsRequired = useTLS;
+			this.tlsRequired = true;
+			this.certificate = certificate;
 		}
 
 		/// <summary>
@@ -255,12 +265,11 @@ namespace HL7ListenerApplication {
 			int filenameSequenceStart = random.Next(0, 1000000);
 
 			try {
-				X509Certificate2 cert = new X509Certificate2(this.tlsCertificatePath, this.certPassword);
 				TcpClient tcpClient = (TcpClient)client;
 				SslStream clientStream = new SslStream(tcpClient.GetStream());
 				clientStream.ReadTimeout = TCP_TIMEOUT;
 				clientStream.WriteTimeout = TCP_TIMEOUT;
-				clientStream.AuthenticateAsServer(cert);
+				clientStream.AuthenticateAsServer(this.certificate);
 
 
 				byte[] messageBuffer = new byte[4096];
@@ -344,11 +353,6 @@ namespace HL7ListenerApplication {
 				tcpClient.Close();
 				tcpClient.Dispose();
 				cert.Dispose();
-			}
-			catch (System.Security.Cryptography.CryptographicException e) {
-				LogWarning("An error occurred while attempting import the PFX certificate " + this.tlsCertificatePath);
-				LogWarning("Make sure the certificate is in PFX format and does not require a password.");
-				LogWarning(e.Message);
 			}
 			catch (Exception e) {
 				LogWarning("An error occurred while attempting to negotiate TLS.");
@@ -485,40 +489,6 @@ namespace HL7ListenerApplication {
 		}
 
 		/// <summary>
-		/// read a secure string (password) from the console. 
-		/// </summary>
-		private SecureString GetPassword() {
-			// prompt user to enter password
-			Console.ForegroundColor = ConsoleColor.Yellow;
-			Console.WriteLine("");
-			Console.WriteLine("Enter password for certificate (enter for no password):");
-			Console.ResetColor();
-
-			// read password entered into a secure string
-			SecureString password = new SecureString();
-			while (true) {
-				ConsoleKeyInfo info = Console.ReadKey(true);
-				if (info.Key == ConsoleKey.Enter) {
-					Console.WriteLine("");
-					break;
-				}
-				else if (info.Key == ConsoleKey.Backspace) {
-					if (password.Length > 0) {
-						password.RemoveAt(password.Length - 1);
-						Console.Write("\b \b");
-					}
-				}
-				// KeyChar == '\u0000' if the key pressed does not correspond to a printable character
-				else if (info.KeyChar != '\u0000') {
-					password.AppendChar(info.KeyChar);
-					Console.Write("*");
-				}
-			}
-			return password;
-		}
-
-
-		/// <summary>
 		/// Set and get the values of the SendACK option. This can be used to override sending of ACK messages. 
 		/// </summary>
 		public bool SendACK {
@@ -544,7 +514,7 @@ namespace HL7ListenerApplication {
 			get { return this.passthruPort; }
 		}
 
-
+/*
 		/// <summary>
 		/// The FilePath property contains the path to archive the received messages to
 		/// </summary>
@@ -568,7 +538,7 @@ namespace HL7ListenerApplication {
 			set { this.tlsCertificateThumbprint = value; }
 			get { return this.tlsCertificateThumbprint; }
 		}
-
+*/
 		/// <summary>
 		/// Write informational event to the console.
 		/// </summary>

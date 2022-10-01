@@ -3,7 +3,10 @@
 
 using System;
 using System.Linq;
+using System.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace HL7ListenerApplication {
 	class Program {
@@ -14,23 +17,23 @@ namespace HL7ListenerApplication {
 		private static int passthruPort;
 		private static Encoding encoding = Encoding.Default;
 		private static bool useTLS = false;
-		private static string tlsCertificate;
+		private static X509Certificate2 certificate = null;
 
 		static void Main(string[] args) {
 			// parse command line arguments
 			if (ParseArgs(args)) {
 				// create a new instance of HL7TCPListener. Set optional properties to return ACKs, passthru messages, archive location. Start the listener.
-				HL7TCPListener listener = new HL7TCPListener(port, encoding, useTLS);
-				listener.SendACK = sendACK;
-				if (filePath != null) {
-					listener.FilePath = filePath;
+				HL7TCPListener listener;
+				if (useTLS) {
+					listener = new HL7TCPListener(this.port, this.encoding, this.certificate);
 				}
+				else {
+					listener = new HL7TCPListener(this.port, this.encoding);
+				}
+				listener.SendACK = sendACK;
 				if (passthruHost != null) {
 					listener.PassthruHost = passthruHost;
 					listener.PassthruPort = passthruPort;
-				}
-				if (tlsCertificate != null) {
-					listener.TlsCertificatePath = tlsCertificate;
 				}
 				if (!listener.Start()) {
 					LogWarning("Exiting");
@@ -152,23 +155,131 @@ namespace HL7ListenerApplication {
 					case "--TLS":
 					case "-S":
 						if (i + 1 < cmdArgs.Length) {
-							if (!System.IO.File.Exists(cmdArgs[i + 1])) {
-								LogWarning("The certificate file " + cmdArgs[i + 1] + " does not exist.");
-								return false;
-							}
-							else {
+							// check for SHA1 certificate thumbprint
+							if (Regex.IsMatch(cmdArgs[i + 1], "^[A-Z0-9]{40}$", RegexOptions.IgnoreCase)) {
+								// exit if a cert store certificate thumbprint was provided in a non Windows platform
+								if (Environment.OSVersion.platform != Win32NT) {
+									LogWarning("Using a certificate from the certificate store is only supported on a Windows platform.");
+									return false;
+								}
 								useTLS = true;
-								tlsCertificate = cmdArgs[i + 1];
+								string tlsCertificateThumbprint = cmdArgs[i + 1];
+								this.certificate = GetCertificateFromCertStore(tlsCertificateThumbprint);
+								if (this.certificate == null) {
+										LogWarning("An error occurred while attempting read the certificate from the Windows cert store");
+										LogWarning("Make sure the certificate thumbprint is correct.");
+										LogWarning(e.Message);
+										return false;
+								}
+							}
+							// otherwise assume a file path has been provided, check that it is a valid file
+							else {
+								if (!System.IO.File.Exists(cmdArgs[i + 1])) {
+									LogWarning("The certificate file " + cmdArgs[i + 1] + " does not exist.");
+									return false;
+								}
+								else {
+									useTLS = true;
+									string tlsCertificatePath = cmdArgs[i + 1];
+									SecureString certPassword = GetPassword();
+									this.certificate = GetCertificateFromFile(tlsCertificatePath, certPassword);
+									if (this.certificate == null) {
+										LogWarning("An error occurred while attempting import the PFX certificate " + this.tlsCertificatePath);
+										LogWarning("Make sure the certificate is in PFX format and password is correct.");
+										return false;
+									}
+								}
 							}
 						}
+						// exit if no certificate path, or certificate thumbprint was found
 						else {
-							LogWarning("The path to the server TLS certificate was not provided. e.g. -TLS c:\\server.pfx");
+							LogWarning("The path to the server TLS certificate, or the certificate thumbprint, was not provided. e.g. -TLS c:\\server.pfx");
 							return false;
 						}
 						break;
 				}
 			}
 			return true;
+		}
+
+		/// <summary>
+		/// Construct a x509 certificate from a file. Return null if certificate could not be created.
+		/// </summary>
+		private GetCertificateFromFile(string certFilePath, SecureString certPassword) {
+			try {
+				X509Certificate2 cert = new X509Certificate2(certFilePath, certPassword);
+				return cert;
+			}
+			catch {
+				LogWarning(e.Message);
+				return null;
+			}
+		}
+
+		/// <summary>
+		/// obtain a x509 certificate from the Windows CertStore matching a SHA1 thumbprint . 
+		/// </summary>
+		private GetCertificateFromCertStore(string Thumbprint) {
+			try {
+				X509Certificate2Collection CertCollection;
+				// try local machine store first
+				X509Store lmCertStore = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            	lmCertStore.Open(OpenFlags.ReadOnly);
+            	CertCollection = lmCertStore.Certificates.Find(X509FindType.FindByThumbprint, Thumbprint, false);
+            	lmCertStore.Close();
+            
+				// try the current user store if no certs found in local machine store
+				if (0 == CertCollection.Count) {
+        			X509Store cuCertStore = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+					cuCertStore.Open(OpenFlags.ReadOnly);
+					CertCollection = cuCertStore.Certificates.Find(X509FindType.FindByThumbprint, Thumbprint, false);
+					cuCertStore.Close();
+
+					// no certs found in either store, return null
+					if (0 == .Count) {
+						return null;
+					}
+				}
+				// return the first cert found - searching on thumbprint so chance of thumbprint collision is low
+				return CertCollection[0];		
+			}
+			catch  {
+				LogWarning(e.Message);
+				return null;
+			}
+		}
+
+		/// <summary>
+		/// read a secure string (password) from the console. 
+		/// </summary>
+		private SecureString GetPassword() {
+			// prompt user to enter password
+			Console.ForegroundColor = ConsoleColor.Yellow;
+			Console.WriteLine("");
+			Console.WriteLine("Enter password for certificate (enter for no password):");
+			Console.ResetColor();
+
+			// read password entered into a secure string
+			SecureString password = new SecureString();
+			while (true) {
+				ConsoleKeyInfo info = Console.ReadKey(true);
+				if (info.Key == ConsoleKey.Enter) {
+					Console.WriteLine("");
+					break;
+				}
+				else if (info.Key == ConsoleKey.Backspace) {
+					if (password.Length > 0) {
+						password.RemoveAt(password.Length - 1);
+						Console.Write("\b \b");
+					}
+				}
+				// KeyChar == '\u0000' if the key pressed does not correspond to a printable character
+				else if (info.KeyChar != '\u0000') {
+					password.AppendChar(info.KeyChar);
+					Console.Write("*");
+				}
+			}
+			return password;
 		}
 
 
@@ -178,24 +289,24 @@ namespace HL7ListenerApplication {
 		static void Usage() {
 			Console.WriteLine("");
 			Console.WriteLine(" HL7Listener - v1.4 - Robert Holme. A simple MLLP listener to archive HL7 messages to disk.");
-			Console.WriteLine(" Usage:");
 			Console.WriteLine("");
 			Console.ForegroundColor = ConsoleColor.Yellow;
-			Console.WriteLine(" HL7Listener.exe -Port <PortNumber> [-FilePath <path>] [-NoACK] [-Passthru <host>:<port>] [-TLS] <certificate-path>");
+			Console.WriteLine(" HL7Listener.exe --Port <PortNumber> [--FilePath <path>] [--NoACK] [--Passthru <host>:<port>] [--TLS] <certificate-path>");
 			Console.ResetColor();
 			Console.WriteLine("");
-			Console.WriteLine("    -Port <PortNumber> specifies the port to listen on. Must be an integer between 1025 and 65535");
+			Console.WriteLine("    --Port <PortNumber> specifies the port to listen on. Must be an integer between 1025 and 65535");
 			Console.WriteLine("");
-			Console.WriteLine("    -FilePath <Path> The path to archive the received messages to. If no path is supplied, messages will be saved");
-			Console.WriteLine("                     to the directory the application is launched from.");
+			Console.WriteLine("    --FilePath <Path> The path to archive the received messages to. If no path is supplied, messages will be saved");
+			Console.WriteLine("        to the directory the application is launched from.");
 			Console.WriteLine("");
-			Console.WriteLine("    -NoACK prevents ACKs from being sent. Without this switch ACKs will always be sent, even if not requested in MSH-15.");
+			Console.WriteLine("    --NoACK prevents ACKs from being sent. Without this switch ACKs will always be sent, even if not requested in MSH-15.");
 			Console.WriteLine("");
-			Console.WriteLine("    -Passthru <host>:<port> Pass all messages received through to the remote host. eg -Passthru somehost:5000");
+			Console.WriteLine("    --Passthru <host>:<port> Pass all messages received through to the remote host. eg --Passthru somehost:5000");
 			Console.WriteLine("");
-			Console.WriteLine("    -Encoding <UTF8|Latin1|ASCII> Optionally define the text encoding for received messages. Defaults to system default encoding (UTF8).");
+			Console.WriteLine("    --Encoding <UTF8|Latin1|ASCII> Define the text encoding for received messages. Defaults to system default (UTF8).");
 			Console.WriteLine("");
-			Console.WriteLine("    -TLS <certificate.pfx> Require for TLS protected connections. Provide server certificate (PFX format)");
+			Console.WriteLine("    --TLS <certificate.pfx> | <thumbprint> Require for TLS protected connections.");
+			Console.WriteLine("         Provide server certificate (PFX format), or a thumbprint for cert from the Windows CertStore");
 			Console.WriteLine("");
 		}
 
