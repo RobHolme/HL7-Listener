@@ -32,6 +32,7 @@ namespace HL7ListenerApplication {
 		private Encoding encoder = Encoding.Default;
 		private bool tlsRequired = false;
 		private string tlsCertificatePath;
+		private string tlsCertificateThumbprint;
 		private SecureString certPassword;
 
 		/// <summary>
@@ -558,6 +559,14 @@ namespace HL7ListenerApplication {
 		public string TlsCertificatePath {
 			set { this.tlsCertificatePath = value; }
 			get { return this.tlsCertificatePath; }
+		}
+
+		// <summary>
+		/// The TlsCertificateThumbprint property contains the SHA1 hash of the certificate in the Windows Cert Store to use
+		/// </summary>
+		public string TlsCertificateThumbprint {
+			set { this.tlsCertificateThumbprint = value; }
+			get { return this.tlsCertificateThumbprint; }
 		}
 
 		/// <summary>
