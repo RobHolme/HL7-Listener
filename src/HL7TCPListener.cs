@@ -24,7 +24,7 @@ namespace HL7ListenerApplication {
 		private string passthruHost = null;
 		private int passthruPort;
 		private NetworkStream PassthruClientStream;
-		private TcpClient passthruClient; 
+		private TcpClient passthruClient;
 		private IPEndPoint remoteEndpoint;
 		private ConcurrentQueue<string> messageQueue = new ConcurrentQueue<string>();
 		private bool runThread = true;
@@ -114,6 +114,16 @@ namespace HL7ListenerApplication {
 				passthruAckThread.Start();
 				LogInformation("Connected to PassThru host");
 			}
+
+/*			while (!Console.KeyAvailable) {
+				ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+                if (keyInfo.Key == ConsoleKey.Escape) {
+					LogInformation("Exiting.");
+					this.runThread = false;
+                    return true;
+				}
+			}
+*/			
 			return true;
 		}
 
@@ -149,6 +159,7 @@ namespace HL7ListenerApplication {
 					}
 
 				}
+				this.tcpListener.Stop();
 			}
 			catch (Exception e) {
 				LogWarning("An error occurred while attempting to start the listener on port " + this.listenerPort);
@@ -349,7 +360,7 @@ namespace HL7ListenerApplication {
 				clientStream.Dispose();
 				tcpClient.Close();
 				tcpClient.Dispose();
-//				this.certificate.Dispose();
+				//				this.certificate.Dispose();
 			}
 			catch (Exception e) {
 				LogWarning("An error occurred while attempting to negotiate TLS.");
@@ -511,31 +522,31 @@ namespace HL7ListenerApplication {
 			get { return this.passthruPort; }
 		}
 
-/*
-		/// <summary>
-		/// The FilePath property contains the path to archive the received messages to
-		/// </summary>
-		public string FilePath {
-			set { this.archivePath = value; }
-			get { return this.archivePath; }
-		}
+		/*
+				/// <summary>
+				/// The FilePath property contains the path to archive the received messages to
+				/// </summary>
+				public string FilePath {
+					set { this.archivePath = value; }
+					get { return this.archivePath; }
+				}
 
-		/// <summary>
-		/// The TlsCertificatePath property contains the path to the pfx file to use as the server TLS certificate
-		/// </summary>
-		public string TlsCertificatePath {
-			set { this.tlsCertificatePath = value; }
-			get { return this.tlsCertificatePath; }
-		}
+				/// <summary>
+				/// The TlsCertificatePath property contains the path to the pfx file to use as the server TLS certificate
+				/// </summary>
+				public string TlsCertificatePath {
+					set { this.tlsCertificatePath = value; }
+					get { return this.tlsCertificatePath; }
+				}
 
-		// <summary>
-		/// The TlsCertificateThumbprint property contains the SHA1 hash of the certificate in the Windows Cert Store to use
-		/// </summary>
-		public string TlsCertificateThumbprint {
-			set { this.tlsCertificateThumbprint = value; }
-			get { return this.tlsCertificateThumbprint; }
-		}
-*/
+				// <summary>
+				/// The TlsCertificateThumbprint property contains the SHA1 hash of the certificate in the Windows Cert Store to use
+				/// </summary>
+				public string TlsCertificateThumbprint {
+					set { this.tlsCertificateThumbprint = value; }
+					get { return this.tlsCertificateThumbprint; }
+				}
+		*/
 		/// <summary>
 		/// Write informational event to the console.
 		/// </summary>
