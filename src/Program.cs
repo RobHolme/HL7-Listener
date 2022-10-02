@@ -36,7 +36,7 @@ namespace HL7ListenerApplication {
 					listener.PassthruPort = passthruPort;
 				}
 				if (!listener.Start()) {
-					LogWarning("Exiting");
+					LogWarning("Exiting - failed to start socket listener.");
 				}
 			}
 		}

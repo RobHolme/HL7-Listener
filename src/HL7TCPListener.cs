@@ -32,7 +32,6 @@ namespace HL7ListenerApplication {
 		private bool tlsRequired = false;
 		private X509Certificate2 certificate;
 
-
 		/// <summary>
 		/// Constructor
 		/// </summary>
@@ -119,7 +118,7 @@ namespace HL7ListenerApplication {
 				ConsoleKeyInfo keyInfo = Console.ReadKey(true);
                 if (keyInfo.Key == ConsoleKey.Escape) {
 					LogInformation("Exiting.");
-					this.runThread = false;
+					this.RequestStop();
                     return true;
 				}
 			}
@@ -140,6 +139,7 @@ namespace HL7ListenerApplication {
 		/// </summary>
 		private void StartListener() {
 			try {
+				
 				this.tcpListener.Start();
 				// run the thread unless a request to stop is received
 				while (this.runThread) {
@@ -157,7 +157,6 @@ namespace HL7ListenerApplication {
 						Thread clientThread = new Thread(new ParameterizedThreadStart(ReceiveData));
 						clientThread.Start(client);
 					}
-
 				}
 				this.tcpListener.Stop();
 			}
@@ -188,7 +187,7 @@ namespace HL7ListenerApplication {
 			String messageData = "";
 			int messageCount = 0;
 
-			while (true) {
+			while (this.runThread) {
 				bytesRead = 0;
 				try {
 					// Wait until a client application submits a message
@@ -285,7 +284,7 @@ namespace HL7ListenerApplication {
 				String messageData = "";
 				int messageCount = 0;
 
-				while (true) {
+				while (this.runThread) {
 					bytesRead = 0;
 					try {
 						// Wait until a client application submits a message
