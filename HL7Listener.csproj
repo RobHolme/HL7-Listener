@@ -5,6 +5,7 @@
 	<OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
 	<EnableDefaultItems>true</EnableDefaultItems>
+	<PublishTrimmed>true</PublishTrimmed>
 	<PlatformTarget>x64</PlatformTarget>
 	<Authors>Rob Holme</Authors>
 	<Product>HL7 Listener</Product>
