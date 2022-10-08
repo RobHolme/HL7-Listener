@@ -3,7 +3,7 @@
   <PropertyGroup>
   	<AssemblyName>HL7Listener</AssemblyName>
 	<OutputType>Exe</OutputType>
-    <TargetFrameworks>net6.0;net48</TargetFrameworks>
+    <TargetFramework>net6.0</TargetFramework>
 	<EnableDefaultItems>true</EnableDefaultItems>
 	<PlatformTarget>x64</PlatformTarget>
 	<Authors>Rob Holme</Authors>
