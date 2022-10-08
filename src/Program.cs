@@ -30,6 +30,7 @@ namespace HL7ListenerApplication {
 				else {
 					listener = new HL7TCPListener(port, encoding);
 				}
+				listener.ArchivePath = filePath;
 				listener.SendACK = sendACK;
 				if (passthruHost != null) {
 					listener.PassthruHost = passthruHost;
