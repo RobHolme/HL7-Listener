@@ -74,6 +74,8 @@ namespace HL7ListenerApplication {
 		/// Start the TCP listener. Log the options set.
 		/// </summary>
 		public bool Start() {
+			CancellationToken cancelToken = this.srcCancelToken.Token;
+
 			// start a new thread to listen for new TCP connections
 			this.tcpListener = new TcpListener(IPAddress.Any, this.listenerPort);
 			this.tcpListenerThread = new Thread(new ThreadStart(StartListener));
@@ -98,12 +100,20 @@ namespace HL7ListenerApplication {
 				try {
 					passthruClient = new TcpClient();
 					remoteEndpoint = new IPEndPoint(IPAddress.Parse(this.PassthruHost), this.passthruPort);
-					passthruClient.Connect(remoteEndpoint);
+					passthruClient.ConnectAsync(remoteEndpoint, cancelToken);
 					PassthruClientStream = passthruClient.GetStream();
 					PassthruClientStream.ReadTimeout = TCP_TIMEOUT;
 					PassthruClientStream.WriteTimeout = TCP_TIMEOUT;
 					this.LogInformation("Passing messages onto " + this.passthruHost + ":" + this.passthruPort);
 				}
+				// handle user cancel events
+				catch (System.OperationCanceledException) {
+					LogInformation("Cancel requested. Closing connection to PassThru host " + passthruHost + ":" + passthruPort);
+					passthruClient.Close();
+					passthruClient.Dispose();
+					return true;
+				}
+				// report all other exceptions and exit
 				catch (Exception e) {
 					LogWarning("Unable to create connection to PassThru host " + passthruHost + ":" + passthruPort);
 					LogWarning(e.Message);
@@ -127,7 +137,6 @@ namespace HL7ListenerApplication {
 					return true;
 				}
 			}
-
 			return true;
 		}
 
@@ -136,10 +145,10 @@ namespace HL7ListenerApplication {
 		/// Stop the all threads
 		/// </summary>
 		public void RequestStop() {
-			LogWarning("Cancel requested.");
+			LogWarning("Cancelling all running threads.");
 			// stop processing loops
 			this.runThread = false;
-			// cancel async stream reads
+			// cancel all async operations
 			srcCancelToken.Cancel();
 		}
 
@@ -187,7 +196,6 @@ namespace HL7ListenerApplication {
 		private void ReceiveData(object client) {
 			// create a cancellation token linked to the source cancellation token
 			CancellationToken cancelToken = this.srcCancelToken.Token;
-			cancelToken.ThrowIfCancellationRequested();
 
 			// generate a random sequence number to use for the file names
 			Random random = new Random(Guid.NewGuid().GetHashCode());
@@ -295,6 +303,9 @@ namespace HL7ListenerApplication {
 		/// </summary>
 		/// <param name="client"></param>
 		private void ReceiveTLSData(object client) {
+			// create a cancellation token linked to the source cancellation token
+			CancellationToken cancelToken = this.srcCancelToken.Token;
+
 			// generate a random sequence number to use for the file names
 			Random random = new Random(Guid.NewGuid().GetHashCode());
 			int filenameSequenceStart = random.Next(0, 1000000);
@@ -306,7 +317,6 @@ namespace HL7ListenerApplication {
 				clientStream.WriteTimeout = TCP_TIMEOUT;
 				clientStream.AuthenticateAsServer(this.certificate);
 
-
 				byte[] messageBuffer = new byte[4096];
 				int bytesRead;
 				String messageData = "";
@@ -316,7 +326,11 @@ namespace HL7ListenerApplication {
 					bytesRead = 0;
 					try {
 						// Wait until a client application submits a message
-						bytesRead = clientStream.Read(messageBuffer, 0, 4096);
+						bytesRead = clientStream.ReadAsync(messageBuffer, 0, 4096, cancelToken).Result;
+					}
+					catch (System.OperationCanceledException) {
+						LogInformation("Cancel requested. Closing connection to " + tcpClient.Client.RemoteEndPoint);
+						break;
 					}
 					catch {
 						// A network error has occurred
@@ -361,8 +375,12 @@ namespace HL7ListenerApplication {
 									byte[] encodedResponse = encoder.GetBytes(response);
 									// Send response
 									try {
-										clientStream.Write(encodedResponse, 0, encodedResponse.Length);
+										clientStream.WriteAsync(encodedResponse, 0, encodedResponse.Length, cancelToken);
 										clientStream.Flush();
+									}
+									catch (System.OperationCanceledException) {
+										LogInformation("Cancel initiated. Terminating send of ACK for messageControlID: " + messageControlID);
+										break;
 									}
 									catch (Exception e) {
 										// A network error has occurred
@@ -383,11 +401,15 @@ namespace HL7ListenerApplication {
 					}
 				}
 				LogInformation("Total messages received:" + messageCount);
-				clientStream.Close();
-				clientStream.Dispose();
-				tcpClient.Close();
-				tcpClient.Dispose();
-				//				this.certificate.Dispose();
+				try {
+					clientStream.Close();
+					clientStream.Dispose();
+					tcpClient.Close();
+					tcpClient.Dispose();
+				}
+				catch {
+					// nothing to do
+				}
 			}
 			catch (Exception e) {
 				LogWarning("An error occurred while attempting to negotiate TLS.");
@@ -402,9 +424,10 @@ namespace HL7ListenerApplication {
 		/// <param name="ClientStream"></param>
 		/// <param name="MessageData"></param>
 		private void SendData() {
+			// create a cancellation token linked to the source cancellation token
+			CancellationToken cancelToken = this.srcCancelToken.Token;
+
 			byte[] receiveBuffer = new byte[4096];
-			//         int bytesRead;
-			//         string ackData = "";
 			string tempMessage;
 
 			while (this.runThread) {
@@ -425,21 +448,35 @@ namespace HL7ListenerApplication {
 							this.passthruClient.Close();
 							this.passthruClient = new TcpClient();
 							this.remoteEndpoint = new IPEndPoint(IPAddress.Parse(this.PassthruHost), this.passthruPort);
-							this.passthruClient.Connect(remoteEndpoint);
+							this.passthruClient.ConnectAsync(remoteEndpoint, cancelToken);
 							this.PassthruClientStream = passthruClient.GetStream();
 							this.PassthruClientStream.ReadTimeout = TCP_TIMEOUT;
 							this.PassthruClientStream.WriteTimeout = TCP_TIMEOUT;
 						}
 						LogInformation("Sending message to PassThru host " + this.passthruHost + ":" + this.passthruPort);
-						this.PassthruClientStream.Write(buffer, 0, buffer.Length);
+						this.PassthruClientStream.WriteAsync(buffer, 0, buffer.Length, cancelToken);
 						this.PassthruClientStream.Flush();
+					}
+					// the connection or write was cancelled
+					catch (System.OperationCanceledException) {
+						LogInformation("Cancel initiated. Closing passthru connection to " + this.passthruClient.Client.RemoteEndPoint);
 					}
 					catch (Exception e) {
 						LogWarning("Unable to send message to -Passsthru host (" + this.PassthruHost + ":" + this.passthruPort + ")");
 						LogWarning(e.Message);
 					}
 				}
-				Thread.Sleep(2000);
+				Thread.Sleep(500);
+			}
+			// close passthru connections
+			try {
+				this.passthruClient.Close();
+				this.passthruClient.Dispose();
+				this.PassthruClientStream.Close();
+				this.PassthruClientStream.Dispose();
+			}
+			catch {
+				// no handler needed at this point as application is exiting.
 			}
 		}
 
@@ -494,6 +531,9 @@ namespace HL7ListenerApplication {
 		/// Run this in a thread as this will block execution waiting for a response.
 		/// </summary>
 		private void ReceiveACK() {
+			// create a cancellation token linked to the source cancellation token
+			CancellationToken cancelToken = this.srcCancelToken.Token;
+
 			int bytesRead;
 			string ackData = "";
 			byte[] receiveBuffer = new byte[4096];
@@ -502,7 +542,7 @@ namespace HL7ListenerApplication {
 			LogInformation("Receive ACK thread started");
 			while (this.runThread) {
 				try {
-					bytesRead = this.PassthruClientStream.Read(receiveBuffer, 0, 4096);
+					bytesRead = this.PassthruClientStream.ReadAsync(receiveBuffer, 0, 4096, cancelToken).Result;
 					// Message buffer received successfully
 					ackData += Encoding.UTF8.GetString(receiveBuffer, 0, bytesRead);
 					// Find a VT character, this is the beginning of the MLLP frame
@@ -515,6 +555,9 @@ namespace HL7ListenerApplication {
 							ackData = "";
 						}
 					}
+				}
+				catch (System.OperationCanceledException) {
+					LogInformation("Cancel requested. Existing ReceiveACK");
 				}
 				catch (Exception) {
 					LogWarning("Connection timed out or ended while waiting for ACK from PassThru host.");
