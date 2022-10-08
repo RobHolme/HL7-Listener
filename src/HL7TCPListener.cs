@@ -9,6 +9,7 @@ namespace HL7ListenerApplication {
 	using System.Net.Security;
 	using System.Net.Sockets;
 	using System.Threading;
+	using System.Threading.Tasks;
 	using System.Collections.Concurrent;
 	using System.Security.Cryptography.X509Certificates;
 
@@ -31,6 +32,7 @@ namespace HL7ListenerApplication {
 		private Encoding encoder = Encoding.Default;
 		private bool tlsRequired = false;
 		private X509Certificate2 certificate;
+		private CancellationTokenSource srcCancelToken = new CancellationTokenSource();
 
 		/// <summary>
 		/// Constructor
@@ -77,16 +79,17 @@ namespace HL7ListenerApplication {
 			this.tcpListener = new TcpListener(IPAddress.Any, this.listenerPort);
 			this.tcpListenerThread = new Thread(new ThreadStart(StartListener));
 			this.tcpListenerThread.Start();
-			this.LogInformation("# Starting HL7 listener on port " + this.listenerPort);
-			this.LogInformation($"# Message encoding: {this.encoder.EncodingName}");
+			LogImportant("Press 'ESC' to exit.");
+			LogInformation("Starting HL7 listener on port " + this.listenerPort);
+			LogInformation($"Message encoding: {this.encoder.EncodingName}");
 			// log information to the console about the options provided by the user
 			if (this.archivePath != null) {
-				this.LogInformation("# Archiving received messages to: " + this.archivePath);
+				this.LogInformation("Archiving received messages to: " + this.archivePath);
 			}
 			if (!sendACK) {
-				this.LogInformation("# Acknowledgements (ACKs) will not be sent");
+				this.LogInformation("Acknowledgements (ACKs) will not be sent");
 			}
-			this.LogInformation("# TLS: " + this.tlsRequired);
+			this.LogInformation("TLS: " + this.tlsRequired);
 			// if  a passthru host has been specified, create a new thread to send messages to the PassThru host
 			if (this.passthruHost != null) {
 				// create a connection to the Passthru host if the -PassThru option was specified.
@@ -97,7 +100,7 @@ namespace HL7ListenerApplication {
 					PassthruClientStream = passthruClient.GetStream();
 					PassthruClientStream.ReadTimeout = TCP_TIMEOUT;
 					PassthruClientStream.WriteTimeout = TCP_TIMEOUT;
-					this.LogInformation("# Passing messages onto " + this.passthruHost + ":" + this.passthruPort);
+					this.LogInformation("Passing messages onto " + this.passthruHost + ":" + this.passthruPort);
 				}
 				catch (Exception e) {
 					LogWarning("Unable to create connection to PassThru host " + passthruHost + ":" + passthruPort);
@@ -114,15 +117,15 @@ namespace HL7ListenerApplication {
 				LogInformation("Connected to PassThru host");
 			}
 
-/*			while (!Console.KeyAvailable) {
+			while (!Console.KeyAvailable) {
 				ConsoleKeyInfo keyInfo = Console.ReadKey(true);
-                if (keyInfo.Key == ConsoleKey.Escape) {
+				if (keyInfo.Key == ConsoleKey.Escape) {
 					LogInformation("Exiting.");
 					this.RequestStop();
-                    return true;
+					return true;
 				}
 			}
-*/			
+
 			return true;
 		}
 
@@ -131,7 +134,11 @@ namespace HL7ListenerApplication {
 		/// Stop the all threads
 		/// </summary>
 		public void RequestStop() {
+			LogWarning("Cancel requested.");
+			// stop processing loops
 			this.runThread = false;
+			// cancel async stream reads
+			srcCancelToken.Cancel();
 		}
 
 		/// <summary>
@@ -139,26 +146,29 @@ namespace HL7ListenerApplication {
 		/// </summary>
 		private void StartListener() {
 			try {
-				
+				// create a cancellation token linked to the source cancellation token
+				CancellationToken cancelToken = this.srcCancelToken.Token;
+				Thread clientThread;
+
 				this.tcpListener.Start();
 				// run the thread unless a request to stop is received
 				while (this.runThread) {
+					TcpClient client = this.tcpListener.AcceptTcpClientAsync(cancelToken).Result;
+					this.LogInformation("New client connection accepted from " + client.Client.RemoteEndPoint);
 					if (this.tlsRequired) {
-						TcpClient client = this.tcpListener.AcceptTcpClient();
-						this.LogInformation("New client connection accepted from " + client.Client.RemoteEndPoint);
-						Thread clientThread = new Thread(new ParameterizedThreadStart(ReceiveTLSData));
-						clientThread.Start(client);
+						clientThread = new Thread(new ParameterizedThreadStart(ReceiveTLSData));
 					}
 					else {
-						// waits for a client connection to the listener
-						TcpClient client = this.tcpListener.AcceptTcpClient();
-						this.LogInformation("New client connection accepted from " + client.Client.RemoteEndPoint);
-						// create a new thread. This will handle communication with a client once connected
-						Thread clientThread = new Thread(new ParameterizedThreadStart(ReceiveData));
-						clientThread.Start(client);
+						clientThread = new Thread(new ParameterizedThreadStart(ReceiveData));
 					}
+					// start the client thread to wait for a client connection
+					clientThread.Start(client);
 				}
 				this.tcpListener.Stop();
+			}
+			// the read was cancelled
+			catch (System.OperationCanceledException) {
+				LogInformation("Cancel requested. Closing TCP Listener on port " + this.listenerPort);
 			}
 			catch (Exception e) {
 				LogWarning("An error occurred while attempting to start the listener on port " + this.listenerPort);
@@ -173,6 +183,10 @@ namespace HL7ListenerApplication {
 		/// </summary>
 		/// <param name="client"></param>
 		private void ReceiveData(object client) {
+			// create a cancellation token linked to the source cancellation token
+			CancellationToken cancelToken = this.srcCancelToken.Token;
+			cancelToken.ThrowIfCancellationRequested();
+
 			// generate a random sequence number to use for the file names
 			Random random = new Random(Guid.NewGuid().GetHashCode());
 			int filenameSequenceStart = random.Next(0, 1000000);
@@ -191,15 +205,20 @@ namespace HL7ListenerApplication {
 				bytesRead = 0;
 				try {
 					// Wait until a client application submits a message
-					bytesRead = clientStream.Read(messageBuffer, 0, 4096);
+					bytesRead = clientStream.ReadAsync(messageBuffer, 0, 4096, cancelToken).Result;
 				}
+				// the read was cancelled
+				catch (System.OperationCanceledException) {
+					LogInformation("Cancel requested. Closing connection to " + tcpClient.Client.RemoteEndPoint);
+					break;
+				}
+				// A network error has occurred
 				catch {
-					// A network error has occurred
 					LogInformation("Connection from " + tcpClient.Client.RemoteEndPoint + " has ended");
 					break;
 				}
+				// The client has disconnected
 				if (bytesRead == 0) {
-					// The client has disconnected
 					LogInformation("The client " + tcpClient.Client.RemoteEndPoint + " has disconnected");
 					break;
 				}
@@ -256,10 +275,17 @@ namespace HL7ListenerApplication {
 					}
 				}
 			}
-			LogInformation("Total messages received:" + messageCount);
-			clientStream.Close();
-			clientStream.Dispose();
-			tcpClient.Close();
+			// close the stream and tcp client. Exit thread.
+			try {
+				LogInformation("Total messages received from " + tcpClient.Client.RemoteEndPoint + " - " + messageCount);
+				clientStream.Close();
+				clientStream.Dispose();
+				tcpClient.Close();
+				tcpClient.Dispose();
+			}
+			catch {
+				// nothing to do.
+			}
 		}
 
 		/// <summary>
@@ -521,31 +547,6 @@ namespace HL7ListenerApplication {
 			get { return this.passthruPort; }
 		}
 
-		/*
-				/// <summary>
-				/// The FilePath property contains the path to archive the received messages to
-				/// </summary>
-				public string FilePath {
-					set { this.archivePath = value; }
-					get { return this.archivePath; }
-				}
-
-				/// <summary>
-				/// The TlsCertificatePath property contains the path to the pfx file to use as the server TLS certificate
-				/// </summary>
-				public string TlsCertificatePath {
-					set { this.tlsCertificatePath = value; }
-					get { return this.tlsCertificatePath; }
-				}
-
-				// <summary>
-				/// The TlsCertificateThumbprint property contains the SHA1 hash of the certificate in the Windows Cert Store to use
-				/// </summary>
-				public string TlsCertificateThumbprint {
-					set { this.tlsCertificateThumbprint = value; }
-					get { return this.tlsCertificateThumbprint; }
-				}
-		*/
 		/// <summary>
 		/// Write informational event to the console.
 		/// </summary>
@@ -554,7 +555,6 @@ namespace HL7ListenerApplication {
 			Console.WriteLine(DateTime.Now + ": " + message);
 		}
 
-
 		/// <summary>
 		/// Write a warning message to the console
 		/// </summary>
@@ -562,6 +562,16 @@ namespace HL7ListenerApplication {
 		private void LogWarning(string message) {
 			Console.ForegroundColor = ConsoleColor.Yellow;
 			Console.WriteLine("WARNING: " + message);
+			Console.ResetColor();
+		}
+
+		/// <summary>
+		/// Write a warning message to the console
+		/// </summary>
+		/// <param name="message"></param>
+		private void LogImportant(string message) {
+			Console.ForegroundColor = ConsoleColor.Green;
+			Console.WriteLine("\n" + message + "\n");
 			Console.ResetColor();
 		}
 	}
