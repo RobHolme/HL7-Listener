@@ -99,7 +99,6 @@ namespace HL7ListenerApplication {
 				// create a connection to the Passthru host if the -PassThru option was specified.
 				try {
 					passthruClient = new TcpClient();
-					passthruClient.NoDelay = true;
 					remoteEndpoint = new IPEndPoint(IPAddress.Parse(this.PassthruHost), this.passthruPort);
 					passthruClient.ConnectAsync(remoteEndpoint, cancelToken);
 					PassthruClientStream = passthruClient.GetStream();
@@ -430,11 +429,11 @@ namespace HL7ListenerApplication {
 			// create a cancellation token linked to the source cancellation token
 			CancellationToken cancelToken = this.srcCancelToken.Token;
 
-			//			byte[] receiveBuffer = new byte[4096];
 			string tempMessage;
 
 			while (this.runThread) {
 				while (messageQueue.TryDequeue(out tempMessage)) {
+					
 					int bytesRead;
 					string ackData = "";
 					byte[] receiveBuffer = new byte[4096];
@@ -448,19 +447,14 @@ namespace HL7ListenerApplication {
 					messageString.Append((char)0x0D);
 
 					try {
-						// close any open streams
-						//					this.PassthruClientStream.Close();
-
 						// encode and send the message
 						byte[] buffer = encoder.GetBytes(messageString.ToString().ToCharArray());
 
-						// THE FOLLOWING CODE HAD ISSUES WITH CLIENTS MISSING MESSAGES WHEN SENT VIA THE SAME STREAM. LESS EFFICIENT, BUT MOVING TO NEW CONNECTION EACH TIME, FIX THIS LATER
 						// if the client connection has timed out, or the remote host has disconnected, reconnect.
 						if (!this.PassthruClientStream.CanWrite) {
 							LogInformation("Connection to passthru host has closed. Reconnecting to " + this.passthruHost + ":" + this.passthruPort);
 							this.passthruClient.Close();
 							this.passthruClient = new TcpClient();
-							passthruClient.NoDelay = true;
 							this.remoteEndpoint = new IPEndPoint(IPAddress.Parse(this.PassthruHost), this.passthruPort);
 							this.passthruClient.ConnectAsync(remoteEndpoint, cancelToken);
 
@@ -470,10 +464,7 @@ namespace HL7ListenerApplication {
 						}
 						LogInformation("Sending message to PassThru host " + this.passthruHost + ":" + this.passthruPort);
 						this.PassthruClientStream.WriteAsync(buffer, 0, buffer.Length, cancelToken);
-						//this.PassthruClientStream.Write(buffer, 0, buffer.Length);
 						bytesRead = this.PassthruClientStream.ReadAsync(receiveBuffer, 0, 4096, cancelToken).Result;
-						//bytesRead = this.PassthruClientStream.Read(receiveBuffer, 0, 4096);
-						// Message buffer received successfully
 						ackData += Encoding.UTF8.GetString(receiveBuffer, 0, bytesRead);
 						// Find a VT character, this is the beginning of the MLLP frame
 						int start = ackData.IndexOf((char)0x0B);
