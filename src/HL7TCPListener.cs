@@ -9,7 +9,6 @@ namespace HL7ListenerApplication {
 	using System.Net.Security;
 	using System.Net.Sockets;
 	using System.Threading;
-	using System.Threading.Tasks;
 	using System.Collections.Concurrent;
 	using System.Security.Cryptography.X509Certificates;
 
@@ -85,6 +84,9 @@ namespace HL7ListenerApplication {
 			// log information to the console about the options provided by the user
 			if (this.archivePath != null) {
 				this.LogInformation("Archiving received messages to: " + this.archivePath);
+			}
+			else {
+				this.LogInformation("Archiving received messages to current directory (--FilePath not detected).");
 			}
 			if (!sendACK) {
 				this.LogInformation("Acknowledgements (ACKs) will not be sent");
@@ -529,6 +531,13 @@ namespace HL7ListenerApplication {
 			set { this.sendACK = value; }
 		}
 
+		/// <summary>
+		/// The PassthruHost property identifies the host to pass the messages through to
+		/// </summary>
+		public string ArchivePath {
+			set { this.archivePath = value; }
+			get { return this.archivePath; }
+		}
 
 		/// <summary>
 		/// The PassthruHost property identifies the host to pass the messages through to
@@ -537,7 +546,6 @@ namespace HL7ListenerApplication {
 			set { this.passthruHost = value; }
 			get { return this.passthruHost; }
 		}
-
 
 		/// <summary>
 		/// The PassthruPort property identifies the remote port to pass the messages thought to.
