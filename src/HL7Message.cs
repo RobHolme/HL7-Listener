@@ -4,8 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 
 namespace HL7ListenerApplication
@@ -348,7 +346,7 @@ namespace HL7ListenerApplication
                     string tmpStr = checkRepeatingFieldNumber.Value.Split('[')[1];
                     FieldRepeat = UInt32.Parse(tmpStr.Split(']')[0]);
                 }
-                // retrieve the field, component and sub component values. If they don't exist, set to 0
+                // retrieve the field, component and subcomponent values. If they don't exist, set to 0
                 tempString = HL7LocationString.Split('-');
                 Segment = tempString[0].Substring(0, 3); // the segment name
                 if (tempString.Count() > 1) // confirm values other than the segment were provided.

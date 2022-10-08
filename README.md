@@ -1,15 +1,15 @@
 # HL7Listener
 
 ## Project Description
-This is a command line application that listens for MLLP framed HL7 messages.  Any HL7 messages received are written to disk. This is intended as a simple diagnostic app to capture a stream of HL7 messages to disk for offline analysis/troubleshooting.
+This is a command line application that listens for MLLP framed HL7 messages.  Any HL7 messages received are written to disk. This is intended as a simple diagnostic app to capture a stream of HL7 messages to disk for offline analysis/troubleshooting. Not intended for production use.
 
 Acknowledgement (ACK) messages will be returned if the message received has the Accept-Acknowledgement field (MSH-15) set to `AL` . If this is not set, no ACK will be returned.  Additionally, ACKs can be prevented from being returned in all cases if the `-NoACK` command line switch is specified. 
 
 HL7Listener supports simultaneous connections from multiple sources. It only supports MLLP framed HL7 messages.
 
 ## Build Instructions
-The solution will build versions for .Net 6.0 and .Net Framework 4.52. If you only wish to target .Net standard or .Net Framework alone, the .csproj file will need to be edited accordingly to specify a single TargetFramework.
-1. Install the .Net 6.0 SDK and the .Net Framework 4.52 SDK. Install instructions for the SDK for each platform are available from:
+The solution will target .Net 6.0 only (some methods used only supported in .Net 6+).
+1. Install the .Net 6.0 SDK. Install instructions for the SDK for each platform are available from:
 * Linux: https://docs.microsoft.com/en-us/dotnet/core/linux-prerequisites?tabs=netcore2x
 * Windows: https://docs.microsoft.com/en-us/dotnet/core/windows-prerequisites?tabs=netcore2x
 * MacOS: https://docs.microsoft.com/en-us/dotnet/core/macos-prerequisites?tabs=netcore2x
@@ -19,8 +19,9 @@ The solution will build versions for .Net 6.0 and .Net Framework 4.52. If you on
 ## Running HL7Listener
 
 ```
-HL7Listener.exe -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>]
+HL7Listener.exe -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>] [-TLS <certificate>]
 ```
+Press the 'ESC' key from the console to terminate the program. 
 
 ### Parameters
 
@@ -44,5 +45,7 @@ __-Encoding \<UTF8 | ASCII | Latin1\>__: Specify an text encoding method for rec
 
  e.g.  `HL7Listener -Port 5000 -FilePath c:\test -Encoding Latin1`
 
+__-TLS \<certificate-path\>|\<certificate-thumbprint\>__: Require clients to connect using TLS. \<certificate-path\> should refer to a file containing a PFX (PKS12) certificate. User will be prompted for the certificate password (enter for no password). If a certificate thumbprint is provided instead, the Windows certificate store will be searched for a matching certificate instead (no prompt for password). The certificate thumbprint option is only supported on Windows platforms.
+Note: The TLS encryption will only apply to connections from remote clients, it will not apply to -PassThru connections.
 
 The file naming convention of the saved files includes the date time stamp, and random 6 digit sequence number, and the message trigger. e.g. `201505301529_028615_ADT^A01.hl7`. If multiple messages are received from the same TCP session, the sequence number will increment for each message. If the TCP connection is closed  and reopened for each message sent, each file name will have a non sequential (random) sequence number.

@@ -1,0 +1,35 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": ".NET Core Launch (console) - TLS",
+			"type": "coreclr",
+			"request": "launch",
+			"preLaunchTask": "build",
+			"program": "${workspaceFolder}/bin/Debug/net6.0/HL7Listener.exe",
+			"args": ["-Port", "5000", "-FilePath", "C:\\scratch\\", "-TLS", "C:\\scratch\\testcert.pfx"],
+			"cwd": "${workspaceFolder}",
+			"console": "internalConsole",
+			"stopAtEntry": false
+		},
+		{
+			"name": ".NET Core Launch (console) - No TLS",
+			"type": "coreclr",
+			"request": "launch",
+			"preLaunchTask": "build",
+			"program": "${workspaceFolder}/bin/Debug/net6.0/HL7Listener.exe",
+			"args": ["-Port", "5000", "-FilePath", "C:\\scratch\\"],
+			"cwd": "${workspaceFolder}",
+			"console": "internalConsole",
+			"stopAtEntry": false
+		},
+		{
+			"name": ".NET Core Attach",
+			"type": "coreclr",
+			"request": "attach"
+		}
+	]
+}
