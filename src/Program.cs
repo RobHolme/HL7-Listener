@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.IO;
 using System.Text.RegularExpressions;
 
 namespace HL7ListenerApplication {
@@ -91,8 +92,8 @@ namespace HL7ListenerApplication {
 								return false;
 							}
 							// append trailing slash if not present
-							if (!(filePath.Substring(filePath.Length - 1, 1) == "\\")) {
-								filePath = filePath + "\\";
+							if (!(filePath.Substring(filePath.Length - 1, 1) == Path.DirectorySeparatorChar.ToString())) {
+								filePath = filePath + Path.DirectorySeparatorChar.ToString();
 							}
 						}
 						break;
