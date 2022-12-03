@@ -16,6 +16,11 @@ The solution will target .Net 6.0 only (some methods used only supported in .Net
 1. Open a command console, navigate to the root folder of this solution (containing HL7Listener.csproj). Run the following build command:
 `dotnet build --configuration Release`
 2. The build process will copy a version for each .Net version to subfolders of `bin\release\`.
+
+## Install Instructions (Instead of build)
+If you do not wish to build from source, download the latest pre-built release from: https://github.com/RobHolme/HL7-Listener/releases
+These are self-contained releases that include the relevant .Net dependencies, it does not require the .Net runtime to be installed.
+
 ## Running HL7Listener
 Windows
 ```
@@ -49,7 +54,7 @@ __-Encoding \<UTF8 | ASCII | Latin1\>__: Specify an text encoding method for rec
 
  e.g.  `HL7Listener -Port 5000 -FilePath c:\test -Encoding Latin1`
 
-__-TLS \<certificate-path\>|\<certificate-thumbprint\>__: Require clients to connect using TLS. \<certificate-path\> should refer to a file containing a PFX (PKS12) certificate. User will be prompted for the certificate password (enter if no password). If a certificate thumbprint is provided instead, the Windows certificate store will be searched for a matching certificate instead. The certificate thumbprint option is only supported on Windows platforms, Linux platforms limited to providing a cerificate file only.
+__-TLS \<certificate-path\>|\<certificate-thumbprint\>__: Require clients to connect using TLS. \<certificate-path\> should refer to a file containing a PFX (PKS12) certificate. User will be prompted for the certificate password (enter if no password). If a certificate thumbprint is provided instead, the Windows certificate store will be searched for a matching certificate instead. The certificate thumbprint option is only supported on Windows platforms, Linux platforms limited to providing a certificate file only.
 Note: The TLS encryption will only apply to connections from remote clients, it will not apply to -PassThru connections.
 
-The file naming convention of the saved files includes the date time stamp, and random 6 digit sequence number, and the message trigger. e.g. `201505301529_028615_ADT^A01.hl7`. If multiple messages are received from the same TCP session, the sequence number will increment for each message. If the TCP connection is closed  and reopened for each message sent, each file name will have a non sequential (random) sequence number.
+The file naming convention of the saved files includes the date time stamp, and random 6 digit sequence number, and the message trigger. e.g. `201505301529_028615_ADT^A01.hl7`. If multiple messages are received from the same TCP session, the sequence number will increment for each message. If the TCP connection is closed and reopened for each message sent, each file name will have a non-sequential (random) sequence number.
