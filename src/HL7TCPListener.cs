@@ -1,6 +1,5 @@
 ﻿// Rob Holme (rob@holme.com.au)
 // 03/06/2015 - Initial version
-// 01/09/2016 - Changed behaviour to always send ACKS (unless -NoACK is set). No longer honouring the ACK mode from MSH-15, this caused issues for senders expecting ACKS but not setting MSH-15.
 
 namespace HL7ListenerApplication {
 	using System;
