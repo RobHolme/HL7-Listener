@@ -19,11 +19,11 @@ The solution will target .Net 6.0 only (some methods used only supported in .Net
 ## Running HL7Listener
 Windows
 ```
-HL7Listener.exe -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>] [-TLS <certificate>]
+HL7Listener.exe -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>] [-TLS <certificate-path | certificate-thumbprint>]
 ```
 Linux
 ```
-HL7Listener -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>] [-TLS <certificate>]
+HL7Listener -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>] [-TLS <certificate-path>]
 ```
 Press the 'ESC' key from the console to terminate the program. 
 
@@ -49,7 +49,7 @@ __-Encoding \<UTF8 | ASCII | Latin1\>__: Specify an text encoding method for rec
 
  e.g.  `HL7Listener -Port 5000 -FilePath c:\test -Encoding Latin1`
 
-__-TLS \<certificate-path\>|\<certificate-thumbprint\>__: Require clients to connect using TLS. \<certificate-path\> should refer to a file containing a PFX (PKS12) certificate. User will be prompted for the certificate password (enter for no password). If a certificate thumbprint is provided instead, the Windows certificate store will be searched for a matching certificate instead (no prompt for password). The certificate thumbprint option is only supported on Windows platforms.
+__-TLS \<certificate-path\>|\<certificate-thumbprint\>__: Require clients to connect using TLS. \<certificate-path\> should refer to a file containing a PFX (PKS12) certificate. User will be prompted for the certificate password (enter if no password). If a certificate thumbprint is provided instead, the Windows certificate store will be searched for a matching certificate instead. The certificate thumbprint option is only supported on Windows platforms, Linux platforms limited to providing a cerificate file only.
 Note: The TLS encryption will only apply to connections from remote clients, it will not apply to -PassThru connections.
 
 The file naming convention of the saved files includes the date time stamp, and random 6 digit sequence number, and the message trigger. e.g. `201505301529_028615_ADT^A01.hl7`. If multiple messages are received from the same TCP session, the sequence number will increment for each message. If the TCP connection is closed  and reopened for each message sent, each file name will have a non sequential (random) sequence number.
