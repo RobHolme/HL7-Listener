@@ -8,7 +8,7 @@ Acknowledgement (ACK) messages will be returned if the message received has the 
 HL7Listener supports simultaneous connections from multiple sources. It only supports MLLP framed HL7 messages.
 
 ## Build Instructions
-The solution will target .Net 6.0 only (some methods used only supported in .Net 6+).
+The solution will target .Net 6.0.
 1. Install the .Net 6.0 SDK. Install instructions for the SDK for each platform are available from:
 * Linux: https://docs.microsoft.com/en-us/dotnet/core/linux-prerequisites?tabs=netcore2x
 * Windows: https://docs.microsoft.com/en-us/dotnet/core/windows-prerequisites?tabs=netcore2x
