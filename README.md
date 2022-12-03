@@ -17,9 +17,13 @@ The solution will target .Net 6.0 only (some methods used only supported in .Net
 `dotnet build --configuration Release`
 2. The build process will copy a version for each .Net version to subfolders of `bin\release\`.
 ## Running HL7Listener
-
+Windows
 ```
 HL7Listener.exe -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>] [-TLS <certificate>]
+```
+Linux
+```
+HL7Listener -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>] [-TLS <certificate>]
 ```
 Press the 'ESC' key from the console to terminate the program. 
 
