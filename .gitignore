@@ -5,6 +5,7 @@
 *.suo
 *.user
 *.sln.docstates
+HL7-Listener.sln
 
 # Build results
 [Dd]ebug/
