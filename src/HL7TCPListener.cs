@@ -1,8 +1,7 @@
 ﻿// Rob Holme (rob@holme.com.au)
 // 03/06/2015 - Initial version
 
-namespace HL7ListenerApplication
-{
+namespace HL7ListenerApplication {
 	using System;
 	using System.Text;
 	using System.Net;
@@ -12,8 +11,7 @@ namespace HL7ListenerApplication
 	using System.Collections.Concurrent;
 	using System.Security.Cryptography.X509Certificates;
 
-	class HL7TCPListener
-	{
+	class HL7TCPListener {
 		const int TCP_TIMEOUT = 300000; // timeout value for receiving TCP data in milliseconds
 		private TcpListener tcpListener;
 		private Thread tcpListenerThread;
@@ -38,8 +36,7 @@ namespace HL7ListenerApplication
 		/// <summary>
 		/// Constructor
 		/// </summary>
-		public HL7TCPListener(int port)
-		{
+		public HL7TCPListener(int port) {
 			this.listenerPort = port;
 			this.tlsRequired = false;
 			this.certificate = null;
@@ -48,8 +45,7 @@ namespace HL7ListenerApplication
 		/// <summary>
 		/// Constructor - define encoding
 		/// </summary>
-		public HL7TCPListener(int port, Encoding encoding)
-		{
+		public HL7TCPListener(int port, Encoding encoding) {
 			this.listenerPort = port;
 			this.encoder = encoding;
 			this.certificate = null;
@@ -58,8 +54,7 @@ namespace HL7ListenerApplication
 		/// <summary>
 		/// Constructor - supply certificate to use TLS
 		/// </summary>
-		public HL7TCPListener(int port, X509Certificate2 certificate)
-		{
+		public HL7TCPListener(int port, X509Certificate2 certificate) {
 			this.listenerPort = port;
 			this.tlsRequired = true;
 			this.certificate = certificate;
@@ -68,8 +63,7 @@ namespace HL7ListenerApplication
 		/// <summary>
 		/// Constructor - supply certificate to use TLS, define encoding
 		/// </summary>
-		public HL7TCPListener(int port, Encoding encoding, X509Certificate2 certificate)
-		{
+		public HL7TCPListener(int port, Encoding encoding, X509Certificate2 certificate) {
 			this.listenerPort = port;
 			this.encoder = encoding;
 			this.tlsRequired = true;
@@ -79,8 +73,7 @@ namespace HL7ListenerApplication
 		/// <summary>
 		/// Start the TCP listener. Log the options set.
 		/// </summary>
-		public bool Start()
-		{
+		public bool Start() {
 			CancellationToken cancelToken = this.srcCancelToken.Token;
 
 			// start a new thread to listen for new TCP connections
@@ -91,26 +84,21 @@ namespace HL7ListenerApplication
 			LogInformation("Starting HL7 listener on port " + this.listenerPort);
 			LogInformation($"Message encoding: {this.encoder.EncodingName}");
 			// log information to the console about the options provided by the user
-			if (this.archivePath != null)
-			{
+			if (this.archivePath != null) {
 				this.LogInformation("Archiving received messages to: " + this.archivePath);
 			}
-			else
-			{
+			else {
 				this.LogInformation("Archiving received messages to current directory (--FilePath not detected).");
 			}
-			if (!sendACK)
-			{
+			if (!sendACK) {
 				this.LogInformation("Acknowledgements (ACKs) will not be sent");
 			}
 			this.LogInformation("TLS: " + this.tlsRequired);
 			this.LogInformation("Message Debugging: " + this.debug);
 			// if  a passthru host has been specified, create a new thread to send messages to the PassThru host
-			if (this.passthruHost != null)
-			{
+			if (this.passthruHost != null) {
 				// create a connection to the Passthru host if the -PassThru option was specified.
-				try
-				{
+				try {
 					passthruClient = new TcpClient();
 					remoteEndpoint = new IPEndPoint(IPAddress.Parse(this.PassthruHost), this.passthruPort);
 					passthruClient.ConnectAsync(remoteEndpoint, cancelToken);
@@ -120,16 +108,14 @@ namespace HL7ListenerApplication
 					this.LogInformation("Passing messages onto " + this.passthruHost + ":" + this.passthruPort);
 				}
 				// handle user cancel events
-				catch (System.OperationCanceledException)
-				{
+				catch (System.OperationCanceledException) {
 					LogInformation("Cancel requested. Closing connection to PassThru host " + passthruHost + ":" + passthruPort);
 					passthruClient.Close();
 					passthruClient.Dispose();
 					return true;
 				}
 				// report all other exceptions and exit
-				catch (Exception e)
-				{
+				catch (Exception e) {
 					LogWarning("Unable to create connection to PassThru host " + passthruHost + ":" + passthruPort);
 					LogWarning(e.Message);
 					this.RequestStop();
@@ -144,11 +130,9 @@ namespace HL7ListenerApplication
 				LogInformation("Connected to PassThru host");
 			}
 
-			while (!Console.KeyAvailable)
-			{
+			while (!Console.KeyAvailable) {
 				ConsoleKeyInfo keyInfo = Console.ReadKey(true);
-				if (keyInfo.Key == ConsoleKey.Escape)
-				{
+				if (keyInfo.Key == ConsoleKey.Escape) {
 					LogInformation("Exiting.");
 					this.RequestStop();
 					return true;
@@ -161,8 +145,7 @@ namespace HL7ListenerApplication
 		/// <summary>
 		/// Stop the all threads
 		/// </summary>
-		public void RequestStop()
-		{
+		public void RequestStop() {
 			LogWarning("Cancelling all running threads.");
 			// stop processing loops
 			this.runThread = false;
@@ -173,26 +156,21 @@ namespace HL7ListenerApplication
 		/// <summary>
 		/// Start listening for new connections
 		/// </summary>
-		private void StartListener()
-		{
-			try
-			{
+		private void StartListener() {
+			try {
 				// create a cancellation token linked to the source cancellation token
 				CancellationToken cancelToken = this.srcCancelToken.Token;
 				Thread clientThread;
 
 				this.tcpListener.Start();
 				// run the thread unless a request to stop is received
-				while (this.runThread)
-				{
+				while (this.runThread) {
 					TcpClient client = this.tcpListener.AcceptTcpClientAsync(cancelToken).Result;
 					this.LogInformation("New client connection accepted from " + client.Client.RemoteEndPoint);
-					if (this.tlsRequired)
-					{
+					if (this.tlsRequired) {
 						clientThread = new Thread(new ParameterizedThreadStart(ReceiveTLSData));
 					}
-					else
-					{
+					else {
 						clientThread = new Thread(new ParameterizedThreadStart(ReceiveData));
 					}
 					// start the client thread to wait for a client connection
@@ -201,12 +179,10 @@ namespace HL7ListenerApplication
 				this.tcpListener.Stop();
 			}
 			// the read was cancelled
-			catch (System.OperationCanceledException)
-			{
+			catch (System.OperationCanceledException) {
 				LogInformation("Cancel requested. Closing TCP Listener on port " + this.listenerPort);
 			}
-			catch (Exception e)
-			{
+			catch (Exception e) {
 				LogWarning("An error occurred while attempting to start the listener on port " + this.listenerPort);
 				LogWarning(e.Message);
 				LogWarning("HL7Listener exiting.");
@@ -218,8 +194,7 @@ namespace HL7ListenerApplication
 		/// Receive data from a client connection, look for MLLP HL7 message.
 		/// </summary>
 		/// <param name="client"></param>
-		private void ReceiveData(object client)
-		{
+		private void ReceiveData(object client) {
 			// create a cancellation token linked to the source cancellation token
 			CancellationToken cancelToken = this.srcCancelToken.Token;
 
@@ -239,29 +214,24 @@ namespace HL7ListenerApplication
 			String messageData = "";
 			int messageCount = 0;
 
-			while (this.runThread)
-			{
+			while (this.runThread) {
 				bytesRead = 0;
-				try
-				{
+				try {
 					// Wait until a client application submits a message
 					bytesRead = clientStream.ReadAsync(messageBuffer, 0, 4096, cancelToken).Result;
 				}
 				// the read was cancelled
-				catch (System.OperationCanceledException)
-				{
+				catch (System.OperationCanceledException) {
 					LogInformation("Cancel initiated. Closing connection to " + tcpClient.Client.RemoteEndPoint);
 					break;
 				}
 				// A network error has occurred
-				catch
-				{
+				catch {
 					LogInformation("Connection from " + tcpClient.Client.RemoteEndPoint + " has ended");
 					break;
 				}
 				// The client has disconnected
-				if (bytesRead == 0)
-				{
+				if (bytesRead == 0) {
 					LogInformation("The client " + tcpClient.Client.RemoteEndPoint + " has disconnected");
 					break;
 				}
@@ -269,25 +239,20 @@ namespace HL7ListenerApplication
 				messageData += encoder.GetString(messageBuffer, 0, bytesRead);
 
 				// Log the message received if debug is enabled
-				if (this.debug)
-				{
+				if (this.debug) {
 					LogInformation("Received message\n: " + messageData);
 				}
 
 				// Find a VT character, this is the beginning of the MLLP frame
 				int start = messageData.IndexOf((char)0x0B);
-				if (start >= 0)
-				{
+				if (start >= 0) {
 					// Search for the end of the MLLP frame (a FS character)
 					int end = messageData.IndexOf((char)0x1C);
-					if (end > start)
-					{
+					if (end > start) {
 						messageCount++;
-						try
-						{
+						try {
 							// queue the message to sent to the passthru host if the -PassThru option has been set
-							if (passthruHost != null)
-							{
+							if (passthruHost != null) {
 								messageQueue.Enqueue(messageData.Substring(start + 1, end - (start + 1)));
 							}
 							// create a HL7message object from the message received. Use this to access elements needed to populate the ACK message and file name of the archived message
@@ -302,20 +267,23 @@ namespace HL7ListenerApplication
 							WriteMessageToFile(message.ToString(), this.archivePath + filename);
 							// send ACK message is MSH-15 is set to AL and ACKs not disabled by -NOACK command line switch
 							//if ((this.sendACK) && (acceptAckType.ToUpper() == "AL"))
-							if (this.sendACK)
-							{
+							if (this.sendACK) {
 								LogInformation("Sending ACK (Message Control ID: " + messageControlID + ")");
 								// generate ACK Message and send in response to the message received
 								string response = GenerateACK(message.ToString());  // TO DO: send ACKS if set in message header, or specified on command line
 								byte[] encodedResponse = encoder.GetBytes(response);
+
+								// Log the ACK message if debug is enabled
+								if (this.debug) {
+									LogInformation("ACK message sent:\n" + response);
+								}
+
 								// Send response
-								try
-								{
+								try {
 									clientStream.Write(encodedResponse, 0, encodedResponse.Length);
 									clientStream.Flush();
 								}
-								catch (Exception e)
-								{
+								catch (Exception e) {
 									// A network error has occurred
 									LogInformation("An error has occurred while sending an ACK to the client " + tcpClient.Client.RemoteEndPoint);
 									LogInformation(e.Message);
@@ -323,8 +291,7 @@ namespace HL7ListenerApplication
 								}
 							}
 						}
-						catch (Exception e)
-						{
+						catch (Exception e) {
 							messageData = ""; // reset the message data string for the next message
 							LogWarning("An exception occurred while parsing the HL7 message");
 							LogWarning(e.Message);
@@ -334,16 +301,14 @@ namespace HL7ListenerApplication
 				}
 			}
 			// close the stream and tcp client. Exit thread.
-			try
-			{
+			try {
 				LogInformation("Total messages received from " + tcpClient.Client.RemoteEndPoint + " - " + messageCount);
 				clientStream.Close();
 				clientStream.Dispose();
 				tcpClient.Close();
 				tcpClient.Dispose();
 			}
-			catch
-			{
+			catch {
 				// nothing to do.
 			}
 		}
@@ -352,8 +317,7 @@ namespace HL7ListenerApplication
 		/// Receive data from a TLS client connection, look for MLLP HL7 message.
 		/// </summary>
 		/// <param name="client"></param>
-		private void ReceiveTLSData(object client)
-		{
+		private void ReceiveTLSData(object client) {
 			// create a cancellation token linked to the source cancellation token
 			CancellationToken cancelToken = this.srcCancelToken.Token;
 
@@ -361,8 +325,7 @@ namespace HL7ListenerApplication
 			Random random = new Random(Guid.NewGuid().GetHashCode());
 			int filenameSequenceStart = random.Next(0, 1000000);
 
-			try
-			{
+			try {
 				TcpClient tcpClient = (TcpClient)client;
 				SslStream clientStream = new SslStream(tcpClient.GetStream());
 				clientStream.ReadTimeout = TCP_TIMEOUT;
@@ -374,27 +337,22 @@ namespace HL7ListenerApplication
 				String messageData = "";
 				int messageCount = 0;
 
-				while (this.runThread)
-				{
+				while (this.runThread) {
 					bytesRead = 0;
-					try
-					{
+					try {
 						// Wait until a client application submits a message
 						bytesRead = clientStream.ReadAsync(messageBuffer, 0, 4096, cancelToken).Result;
 					}
-					catch (System.OperationCanceledException)
-					{
+					catch (System.OperationCanceledException) {
 						LogInformation("Cancel requested. Closing connection to " + tcpClient.Client.RemoteEndPoint);
 						break;
 					}
-					catch
-					{
+					catch {
 						// A network error has occurred
 						LogInformation("Connection from " + tcpClient.Client.RemoteEndPoint + " has ended");
 						break;
 					}
-					if (bytesRead == 0)
-					{
+					if (bytesRead == 0) {
 						// The client has disconnected
 						LogInformation("The client " + tcpClient.Client.RemoteEndPoint + " has disconnected");
 						break;
@@ -403,26 +361,21 @@ namespace HL7ListenerApplication
 					messageData += encoder.GetString(messageBuffer, 0, bytesRead);
 
 					// Log the message received if debug is enabled
-					if (this.debug)
-					{
+					if (this.debug) {
 						LogInformation("Received message:\n: " + messageData);
 					}
 
 
 					// Find a VT character, this is the beginning of the MLLP frame
 					int start = messageData.IndexOf((char)0x0B);
-					if (start >= 0)
-					{
+					if (start >= 0) {
 						// Search for the end of the MLLP frame (a FS character)
 						int end = messageData.IndexOf((char)0x1C);
-						if (end > start)
-						{
+						if (end > start) {
 							messageCount++;
-							try
-							{
+							try {
 								// queue the message to sent to the passthru host if the -PassThru option has been set
-								if (passthruHost != null)
-								{
+								if (passthruHost != null) {
 									messageQueue.Enqueue(messageData.Substring(start + 1, end - (start + 1)));
 								}
 								// create a HL7message object from the message received. Use this to access elements needed to populate the ACK message and file name of the archived message
@@ -437,25 +390,27 @@ namespace HL7ListenerApplication
 								WriteMessageToFile(message.ToString(), this.archivePath + filename);
 								// send ACK message is MSH-15 is set to AL and ACKs not disabled by -NOACK command line switch
 								//if ((this.sendACK) && (acceptAckType.ToUpper() == "AL"))
-								if (this.sendACK)
-								{
+								if (this.sendACK) {
 									LogInformation("Sending ACK (Message Control ID: " + messageControlID + ")");
 									// generate ACK Message and send in response to the message received
 									string response = GenerateACK(message.ToString());  // TO DO: send ACKS if set in message header, or specified on command line
 									byte[] encodedResponse = encoder.GetBytes(response);
+
+									// Log the ACK message if debug is enabled
+									if (this.debug) {
+										LogInformation("ACK message sent:\n" + response);
+									}
+
 									// Send response
-									try
-									{
+									try {
 										clientStream.WriteAsync(encodedResponse, 0, encodedResponse.Length, cancelToken);
 										clientStream.Flush();
 									}
-									catch (System.OperationCanceledException)
-									{
+									catch (System.OperationCanceledException) {
 										LogInformation("Cancel initiated. Terminating send of ACK for messageControlID: " + messageControlID);
 										break;
 									}
-									catch (Exception e)
-									{
+									catch (Exception e) {
 										// A network error has occurred
 										LogInformation("An error has occurred while sending an ACK to the client " + tcpClient.Client.RemoteEndPoint);
 										LogInformation(e.Message);
@@ -464,8 +419,7 @@ namespace HL7ListenerApplication
 									}
 								}
 							}
-							catch (Exception e)
-							{
+							catch (Exception e) {
 								messageData = ""; // reset the message data string for the next message
 								LogWarning("An exception occurred while parsing the HL7 message");
 								LogWarning(e.Message);
@@ -473,27 +427,23 @@ namespace HL7ListenerApplication
 							}
 						}
 					}
-					else
-					{
+					else {
 						// No MLLP frame found, continue to read more data
 						LogWarning("No MLLP frame found in message received.");
 					}
 				}
 				LogInformation("Total messages received:" + messageCount);
-				try
-				{
+				try {
 					clientStream.Close();
 					clientStream.Dispose();
 					tcpClient.Close();
 					tcpClient.Dispose();
 				}
-				catch
-				{
+				catch {
 					// nothing to do
 				}
 			}
-			catch (Exception e)
-			{
+			catch (Exception e) {
 				LogWarning("An error occurred while attempting to negotiate TLS.");
 				LogWarning(e.Message);
 			}
@@ -505,17 +455,14 @@ namespace HL7ListenerApplication
 		/// </summary>
 		/// <param name="ClientStream"></param>
 		/// <param name="MessageData"></param>
-		private void SendData()
-		{
+		private void SendData() {
 			// create a cancellation token linked to the source cancellation token
 			CancellationToken cancelToken = this.srcCancelToken.Token;
 
 			string tempMessage;
 
-			while (this.runThread)
-			{
-				while (messageQueue.TryDequeue(out tempMessage))
-				{
+			while (this.runThread) {
+				while (messageQueue.TryDequeue(out tempMessage)) {
 
 					int bytesRead;
 					string ackData = "";
@@ -529,14 +476,12 @@ namespace HL7ListenerApplication
 					messageString.Append((char)0x1C);
 					messageString.Append((char)0x0D);
 
-					try
-					{
+					try {
 						// encode and send the message
 						byte[] buffer = encoder.GetBytes(messageString.ToString().ToCharArray());
 
 						// if the client connection has timed out, or the remote host has disconnected, reconnect.
-						if (!this.PassthruClientStream.CanWrite)
-						{
+						if (!this.PassthruClientStream.CanWrite) {
 							LogInformation("Connection to passthru host has closed. Reconnecting to " + this.passthruHost + ":" + this.passthruPort);
 							this.passthruClient.Close();
 							this.passthruClient = new TcpClient();
@@ -553,24 +498,20 @@ namespace HL7ListenerApplication
 						ackData += Encoding.UTF8.GetString(receiveBuffer, 0, bytesRead);
 						// Find a VT character, this is the beginning of the MLLP frame
 						int start = ackData.IndexOf((char)0x0B);
-						if (start >= 0)
-						{
+						if (start >= 0) {
 							// Search for the end of the MLLP frame (a FS character)
 							int end = ackData.IndexOf((char)0x1C);
-							if (end > start)
-							{
+							if (end > start) {
 								LogInformation("ACK received from -PassThru host");
 								ackData = "";
 							}
 						}
 					}
 					// the connection or write was cancelled
-					catch (System.OperationCanceledException)
-					{
+					catch (System.OperationCanceledException) {
 						LogInformation("Cancel initiated. Closing passthru connection to " + this.passthruClient.Client.RemoteEndPoint);
 					}
-					catch (Exception e)
-					{
+					catch (Exception e) {
 						LogWarning("Unable to send message to -Passsthru host (" + this.PassthruHost + ":" + this.passthruPort + ")");
 						LogWarning(e.Message);
 					}
@@ -578,15 +519,13 @@ namespace HL7ListenerApplication
 				Thread.Sleep(500);
 			}
 			// close passthru connections
-			try
-			{
+			try {
 				this.passthruClient.Close();
 				this.passthruClient.Dispose();
 				this.PassthruClientStream.Close();
 				this.PassthruClientStream.Dispose();
 			}
-			catch
-			{
+			catch {
 				// no handler needed at this point as application is exiting.
 			}
 		}
@@ -597,18 +536,15 @@ namespace HL7ListenerApplication
 		/// </summary>
 		/// <param name="message"></param>
 		/// <param name="filePath"></param>
-		private void WriteMessageToFile(string message, string filename)
-		{
+		private void WriteMessageToFile(string message, string filename) {
 			// write the HL7 message to file
-			try
-			{
+			try {
 				LogInformation("Received message. Saving to file " + filename);
 				System.IO.StreamWriter file = new System.IO.StreamWriter(filename);
 				file.Write(message);
 				file.Close();
 			}
-			catch (Exception e)
-			{
+			catch (Exception e) {
 				LogWarning("Failed to write file " + filename);
 				LogWarning(e.Message);
 			}
@@ -618,8 +554,7 @@ namespace HL7ListenerApplication
 		/// Generate a string containing the ACK message in response to the original message. Supply a string containing the original message (or at least the MSH segment).
 		/// </summary>
 		/// <returns></returns>
-		string GenerateACK(string originalMessage)
-		{
+		string GenerateACK(string originalMessage) {
 			// create a HL7Message object using the original message as the source to obtain details to reflect back in the ACK message
 			HL7Message tmpMsg = new HL7Message(originalMessage);
 			string trigger = tmpMsg.GetHL7Item("MSH-9.2")[0];
@@ -684,8 +619,7 @@ namespace HL7ListenerApplication
 		/// <summary>
 		/// Set and get the values of the SendACK option. This can be used to override sending of ACK messages. 
 		/// </summary>
-		public bool SendACK
-		{
+		public bool SendACK {
 			get { return this.sendACK; }
 			set { this.sendACK = value; }
 		}
@@ -693,8 +627,7 @@ namespace HL7ListenerApplication
 		/// <summary>
 		/// The PassthruHost property identifies the host to pass the messages through to
 		/// </summary>
-		public string ArchivePath
-		{
+		public string ArchivePath {
 			set { this.archivePath = value; }
 			get { return this.archivePath; }
 		}
@@ -702,8 +635,7 @@ namespace HL7ListenerApplication
 		/// <summary>
 		/// The PassthruHost property identifies the host to pass the messages through to
 		/// </summary>
-		public string PassthruHost
-		{
+		public string PassthruHost {
 			set { this.passthruHost = value; }
 			get { return this.passthruHost; }
 		}
@@ -711,8 +643,7 @@ namespace HL7ListenerApplication
 		/// <summary>
 		/// The PassthruPort property identifies the remote port to pass the messages thought to.
 		/// </summary>
-		public int PassthruPort
-		{
+		public int PassthruPort {
 			set { this.passthruPort = value; }
 			get { return this.passthruPort; }
 		}
@@ -721,8 +652,7 @@ namespace HL7ListenerApplication
 		/// Write informational event to the console.
 		/// </summary>
 		/// <param name="message"></param>
-		private void LogInformation(string message)
-		{
+		private void LogInformation(string message) {
 			Console.WriteLine(DateTime.Now + ": " + message);
 		}
 
@@ -730,8 +660,7 @@ namespace HL7ListenerApplication
 		/// Write a warning message to the console
 		/// </summary>
 		/// <param name="message"></param>
-		private void LogWarning(string message)
-		{
+		private void LogWarning(string message) {
 			Console.ForegroundColor = ConsoleColor.Yellow;
 			Console.WriteLine("WARNING: " + message);
 			Console.ResetColor();
@@ -741,8 +670,7 @@ namespace HL7ListenerApplication
 		/// Write a warning message to the console
 		/// </summary>
 		/// <param name="message"></param>
-		private void LogImportant(string message)
-		{
+		private void LogImportant(string message) {
 			Console.ForegroundColor = ConsoleColor.Green;
 			Console.WriteLine("\n" + message + "\n");
 			Console.ResetColor();
@@ -751,8 +679,7 @@ namespace HL7ListenerApplication
 		/// <summary>
 		/// Set/Get the debug flag. If set to true, messages will be written to the console.
 		/// </summary>
-		public bool Debug
-		{
+		public bool Debug {
 			set { this.debug = value; }
 			get { return this.debug; }
 		}

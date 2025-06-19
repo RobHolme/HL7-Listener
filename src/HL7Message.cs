@@ -6,41 +6,36 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace HL7ListenerApplication
-{
-    
+namespace HL7ListenerApplication {
+
     // this provides basic access to a HL7 message. It is stored as string array of segments, no awareness of the message schema.
-    class HL7Message
-    {
+    class HL7Message {
         private string[] segments;
         private string message;
         private char fieldDelimiter;
         private char componentDelimiter;
         private char subComponentDelimiter;
         private char repeatDelimiter;
-        
+
         /// <summary>
         /// Constructor. Set the field, component, subcomponent and repeat delimiters. Throw an exception if the message  does not include a MSH segment.
         /// </summary>
         /// <param name="message"></param>
-        public HL7Message(string Message)
-        {
+        public HL7Message(string Message) {
 
             message = Message;
             segments = Message.Split((char)0x0D);
             // set the field, component, sub component and repeat delimiters
             int startPos = message.IndexOf("MSH");
-            if (startPos >= 0)
-            {
-                startPos = startPos + 2; 
+            if (startPos >= 0) {
+                startPos = startPos + 2;
                 this.fieldDelimiter = message[startPos + 1];
                 this.componentDelimiter = message[startPos + 2];
                 this.repeatDelimiter = message[startPos + 3];
                 this.subComponentDelimiter = message[startPos + 5];
             }
             // throw an exception if a MSH segment is not included in the message. 
-            else
-            {
+            else {
                 throw new ArgumentException("MSH segment not present.");
             }
         }
@@ -49,16 +44,14 @@ namespace HL7ListenerApplication
         /// <summary>
         /// returns th field delimiter character
         /// </summary>
-        public char FieldDelimiter
-        {
-            get {return this.fieldDelimiter;}
+        public char FieldDelimiter {
+            get { return this.fieldDelimiter; }
         }
 
         /// <summary>
         /// returns the component delimiter character
         /// </summary>
-        public char ComponentDelimiter
-        {
+        public char ComponentDelimiter {
             get { return this.componentDelimiter; }
         }
 
@@ -66,8 +59,7 @@ namespace HL7ListenerApplication
         /// <summary>
         /// returns the sub component delimiter character
         /// </summary>
-        public char SubcomponentDelimiter
-        {
+        public char SubcomponentDelimiter {
             get { return this.subComponentDelimiter; }
         }
 
@@ -75,18 +67,16 @@ namespace HL7ListenerApplication
         /// <summary>
         /// return the repeat delimiter character
         /// </summary>
-        public char RepeatDelimiter
-        {
+        public char RepeatDelimiter {
             get { return this.repeatDelimiter; }
         }
 
-        
+
         /// <summary>
         /// return all message segments as a single string (with 'carriage return' delimiting each segment).  
         /// </summary>
         /// <returns></returns>
-        public override string ToString()
-        {
+        public override string ToString() {
             return message;
         }
 
@@ -96,8 +86,7 @@ namespace HL7ListenerApplication
         /// </summary>
         /// <param name="HL7LocationString"></param>
         /// <returns></returns>
-        public string[] GetHL7Item(string HL7LocationString)
-        {
+        public string[] GetHL7Item(string HL7LocationString) {
             string segmentName;
             uint fieldNumber;
             uint componentNumber;
@@ -142,28 +131,23 @@ namespace HL7ListenerApplication
         /// <param name="SegmentID"></param>
         /// <param name="SegmentRepeatNumber"></param>
         /// <returns></returns>
-        private string[] GetValue(string SegmentID, uint SegmentRepeatNumber)
-        {
+        private string[] GetValue(string SegmentID, uint SegmentRepeatNumber) {
             List<string> segmentsToReturn = new List<string>();
             uint numberOfSegments = 0;
 
-            foreach (string currentLine in this.segments)
-            {
+            foreach (string currentLine in this.segments) {
                 if (Regex.IsMatch(currentLine, "^" + SegmentID, RegexOptions.IgnoreCase)) //search for the segment ID at the start of a line.
                 {
                     numberOfSegments++;
                     // if a SegmentRepeatNumber is provided, only add a segment for this specific repeat. Keep cound of the number of segments found.
-                    if (SegmentRepeatNumber > 0)
-                    {
-                        if (SegmentRepeatNumber == numberOfSegments)
-                        {
+                    if (SegmentRepeatNumber > 0) {
+                        if (SegmentRepeatNumber == numberOfSegments) {
                             segmentsToReturn.Add(currentLine);
                             return segmentsToReturn.ToArray(); // return immediately, only one segment returned if user specifies a particular segment repeat.
                         }
                     }
                     // add all repeats if SegmentRepeatNumber = 0 (ie not provided).
-                    else
-                    {
+                    else {
                         segmentsToReturn.Add(currentLine);
                     }
                 }
@@ -179,8 +163,7 @@ namespace HL7ListenerApplication
         /// <param name="SegmentRepeatNumber"></param>
         /// <param name="FieldRepeatNumber"></param>
         /// <returns></returns>
-        private string[] GetValue(string SegmentID, uint FieldID, uint SegmentRepeatNumber, uint FieldRepeatNumber)
-        {
+        private string[] GetValue(string SegmentID, uint FieldID, uint SegmentRepeatNumber, uint FieldRepeatNumber) {
             List<string> fieldsToReturn = new List<string>();
             string[] fields;
             string[] repeatingFields;
@@ -206,37 +189,29 @@ namespace HL7ListenerApplication
                 }
             }
             // for all segments, return the field(s) requested.
-            for (int i = 0; i < segments.Count(); i++)
-            {
+            for (int i = 0; i < segments.Count(); i++) {
                 string currentField;
                 fields = segments[i].Split(fieldDelimiter);
-                if (FieldID < fields.Length)
-                {
-                    if (fields[FieldID].Contains(repeatDelimiter.ToString()))
-                    {
+                if (FieldID < fields.Length) {
+                    if (fields[FieldID].Contains(repeatDelimiter.ToString())) {
                         repeatingFields = fields[FieldID].Split(repeatDelimiter);
-                        for (uint j = 0; j < repeatingFields.Count(); j++)
-                        {
+                        for (uint j = 0; j < repeatingFields.Count(); j++) {
                             currentField = repeatingFields[j];
                             // if the user has specified a specific field repeat, only return that field.
-                            if (FieldRepeatNumber > 0)
-                            {
-                                if (FieldRepeatNumber == j + 1)
-                                {
+                            if (FieldRepeatNumber > 0) {
+                                if (FieldRepeatNumber == j + 1) {
                                     fieldsToReturn.Add(currentField);
-                                    return fieldsToReturn.ToArray(); 
+                                    return fieldsToReturn.ToArray();
                                 }
                             }
                             // else return all of the repeating fields
-                            else
-                            {
+                            else {
                                 fieldsToReturn.Add(currentField);
                             }
                         }
                     }
                     // no repeats detected, so add the single field to return
-                    else
-                    {
+                    else {
                         if (FieldRepeatNumber <= 1) // since no repeats found, only return a value if user did not specify a specific repeat, or asked for repeat 1. If the user asked for repeats other than the first, nothing will be returned.
                         {
                             fieldsToReturn.Add(fields[FieldID]);
@@ -257,19 +232,16 @@ namespace HL7ListenerApplication
         /// <param name="SegmentRepeatNumber"></param>
         /// <param name="FieldRepeatNumber"></param>
         /// <returns></returns>
-        private string[] GetValue(string SegmentID, uint FieldID, uint ComponentID, uint SegmentRepeatNumber, uint FieldRepeatNumber)
-        {
+        private string[] GetValue(string SegmentID, uint FieldID, uint ComponentID, uint SegmentRepeatNumber, uint FieldRepeatNumber) {
             List<string> componentsToReturn = new List<string>();
             string[] components;
 
             // get the field requested
             string[] fields = GetValue(SegmentID, FieldID, SegmentRepeatNumber, FieldRepeatNumber);
             // from the list of fields returned, look for the component requested.
-            for (int i = 0; i < fields.Count(); i++)
-            {
+            for (int i = 0; i < fields.Count(); i++) {
                 components = fields[i].Split(componentDelimiter);
-                if ((components.Count() >= ComponentID) && (components.Count() > 1))
-                {
+                if ((components.Count() >= ComponentID) && (components.Count() > 1)) {
                     componentsToReturn.Add(components[ComponentID - 1]);
                 }
             }
@@ -287,16 +259,14 @@ namespace HL7ListenerApplication
         /// <param name="SegmentRepeatNumber"></param>
         /// <param name="FieldRepeatNumber"></param>
         /// <returns></returns>
-        private string[] GetValue(string SegmentID, uint FieldID, uint ComponentID, uint SubComponentID, uint SegmentRepeatNumber, uint FieldRepeatNumber)
-        {
+        private string[] GetValue(string SegmentID, uint FieldID, uint ComponentID, uint SubComponentID, uint SegmentRepeatNumber, uint FieldRepeatNumber) {
             List<string> subComponentsToReturn = new List<string>();
             string[] subComponents;
 
             // get the component requested
             string[] components = GetValue(SegmentID, FieldID, ComponentID, SegmentRepeatNumber, FieldRepeatNumber);
             // from the component(s) returned above look for the subcomponent requested
-            for (int i = 0; i < components.Count(); i++)
-            {
+            for (int i = 0; i < components.Count(); i++) {
                 subComponents = components[i].Split(this.subComponentDelimiter);
                 if ((subComponents.Count() >= SubComponentID) && (subComponents.Count() > 1)) // make sure the subComponentID requested exists in the array before requesting it. 
                 {
@@ -317,8 +287,7 @@ namespace HL7ListenerApplication
         /// <param name="Component"></param>
         /// <param name="SubComponent"></param>
         /// <returns></returns>
-        private bool GetElementPosition(string HL7LocationString, out string Segment, out uint SegmentRepeat, out uint Field, out uint FieldRepeat, out uint Component, out uint SubComponent)
-        {
+        private bool GetElementPosition(string HL7LocationString, out string Segment, out uint SegmentRepeat, out uint Field, out uint FieldRepeat, out uint Component, out uint SubComponent) {
             string[] tempString;
             string[] tempString2;
             // set all out values to return to negative results, only set values if  found in HL7LocationString
@@ -333,16 +302,14 @@ namespace HL7ListenerApplication
             {
                 // check to see if a segment repeat number is specified
                 Match checkRepeatingSegmentNumber = System.Text.RegularExpressions.Regex.Match(HL7LocationString, "^[A-Z]{2}([A-Z]|[0-9])[[][1-9]{1,3}[]]", RegexOptions.IgnoreCase);
-                if (checkRepeatingSegmentNumber.Success == true)
-                {
+                if (checkRepeatingSegmentNumber.Success == true) {
                     string tmpStr = checkRepeatingSegmentNumber.Value.Split('[')[1];
                     SegmentRepeat = UInt32.Parse(tmpStr.Split(']')[0]);
 
                 }
                 // check to see if a field repeat number is specified
                 Match checkRepeatingFieldNumber = System.Text.RegularExpressions.Regex.Match(HL7LocationString, "[-][0-9]{1,3}[[]([1-9]|[1-9][0-9])[]]", RegexOptions.IgnoreCase);
-                if (checkRepeatingFieldNumber.Success == true)
-                {
+                if (checkRepeatingFieldNumber.Success == true) {
                     string tmpStr = checkRepeatingFieldNumber.Value.Split('[')[1];
                     FieldRepeat = UInt32.Parse(tmpStr.Split(']')[0]);
                 }
@@ -380,8 +347,7 @@ namespace HL7ListenerApplication
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        public string GetMessageTrigger()
-        {
+        public string GetMessageTrigger() {
             return this.GetHL7Item("MSH-9.1")[0] + "^" + this.GetHL7Item("MSH-9.2")[0];
         }
     }
