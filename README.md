@@ -24,7 +24,7 @@ These are self-contained releases that include the relevant .Net dependencies, i
 ## Running HL7Listener
 Windows
 ```
-HL7Listener.exe -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>] [-TLS <certificate-path | certificate-thumbprint>]
+HL7Listener.exe -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>] [-TLS <certificate-path | certificate-thumbprint>] [-Debug]
 ```
 Linux
 ```
@@ -34,7 +34,7 @@ Press the 'ESC' key from the console to terminate the program.
 
 ### Parameters
 
-__-Port \<port-number\>__: specifies the TCP port to listen for incoming connections.  <port-number> must be in the range from 1025 to 65535.  
+__-port \<port-number\>__: specifies the TCP port to listen for incoming connections.  <port-number> must be in the range from 1025 to 65535.  
 
 e.g. `HL7Listener -Port 5000`
 
@@ -58,3 +58,5 @@ __-TLS \<certificate-path\>|\<certificate-thumbprint\>__: Require clients to con
 Note: The TLS encryption will only apply to connections from remote clients, it will not apply to -PassThru connections.
 
 The file naming convention of the saved files includes the date time stamp, and random 6 digit sequence number, and the message trigger. e.g. `201505301529_028615_ADT^A01.hl7`. If multiple messages are received from the same TCP session, the sequence number will increment for each message. If the TCP connection is closed and reopened for each message sent, each file name will have a non-sequential (random) sequence number.
+
+__-Debug__: Log the messages received (including MLLP framing characters) and ACKs send to the console. 
