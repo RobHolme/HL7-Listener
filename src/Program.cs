@@ -317,7 +317,7 @@ namespace HL7ListenerApplication {
 			Console.WriteLine("");
 			Console.WriteLine("  --NoACK \n\t prevents ACKs from being sent. Without this switch ACKs will always be sent, even if not requested in MSH-15.");
 			Console.WriteLine("");
-			Console.WriteLine("  --Passthru <host>:<port> \n\t Pass all messages received through to the remote host. eg --Passthru somehost:5000");
+			Console.WriteLine("  --Passthru <host>:<port> \n\t Pass all messages received through to the remote host. eg --Passthru somehost:5000 \n\t Expects the remote host to be listening when starting the application.");
 			Console.WriteLine("");
 			Console.WriteLine("  --Encoding <UTF8|Latin1|ASCII> \n\t Define the text encoding for received messages. Defaults to system default (UTF8).");
 			Console.WriteLine("");
