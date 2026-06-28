@@ -305,25 +305,25 @@ namespace HL7ListenerApplication {
 		/// </summary>
 		private static void Usage() {
 			Console.WriteLine("");
-			Console.WriteLine(" HL7Listener - v1.4 - Robert Holme. A simple MLLP listener to archive HL7 messages to disk.");
+			Console.WriteLine($" HL7Listener - v{typeof(Program).Assembly.GetName().Version} - Robert Holme. A simple MLLP listener to archive HL7 messages to disk.");
 			Console.WriteLine("");
 			Console.ForegroundColor = ConsoleColor.Yellow;
-			Console.WriteLine(" HL7Listener.exe --Port <PortNumber> [--FilePath <path>] [--NoACK] [--Passthru <host>:<port>] [--TLS] <certificate-path>");
+			Console.WriteLine(" HL7Listener.exe --Port <PortNumber> [--FilePath <path>] [--NoACK] [--Passthru <host>:<port>] [--TLS <certificate-path>] [--Encoding <UTF8|Latin1|ASCII>] [--Debug]");
 			Console.ResetColor();
 			Console.WriteLine("");
-			Console.WriteLine("    --Port <PortNumber> specifies the port to listen on. Must be an integer between 1025 and 65535");
+			Console.WriteLine("  --Port <PortNumber> \n\t specifies the port to listen on. Must be an integer between 1025 and 65535");
 			Console.WriteLine("");
-			Console.WriteLine("    --FilePath <Path> The path to archive the received messages to. If no path is supplied, messages will be saved");
-			Console.WriteLine("        to the directory the application is launched from.");
+			Console.WriteLine("  --FilePath <Path> \n\t The path to archive the received messages to. If no path is supplied, messages will be saved \n\t to the directory the application is launched from.");
 			Console.WriteLine("");
-			Console.WriteLine("    --NoACK prevents ACKs from being sent. Without this switch ACKs will always be sent, even if not requested in MSH-15.");
+			Console.WriteLine("  --NoACK \n\t prevents ACKs from being sent. Without this switch ACKs will always be sent, even if not requested in MSH-15.");
 			Console.WriteLine("");
-			Console.WriteLine("    --Passthru <host>:<port> Pass all messages received through to the remote host. eg --Passthru somehost:5000");
+			Console.WriteLine("  --Passthru <host>:<port> \n\t Pass all messages received through to the remote host. eg --Passthru somehost:5000");
 			Console.WriteLine("");
-			Console.WriteLine("    --Encoding <UTF8|Latin1|ASCII> Define the text encoding for received messages. Defaults to system default (UTF8).");
+			Console.WriteLine("  --Encoding <UTF8|Latin1|ASCII> \n\t Define the text encoding for received messages. Defaults to system default (UTF8).");
 			Console.WriteLine("");
-			Console.WriteLine("    --TLS <certificate.pfx> | <thumbprint> Require for TLS protected connections.");
-			Console.WriteLine("         Provide server certificate (PFX format), or a thumbprint for cert from the Windows CertStore");
+			Console.WriteLine("  --TLS <certificate.pfx> | <thumbprint> \n\t Required for TLS protected connections. \n\t Provide server certificate (PFX format), or a thumbprint for cert from the Windows CertStore");
+			Console.WriteLine("");
+			Console.WriteLine("  --Debug \n\t Log debugging information and exception messages.");
 			Console.WriteLine("");
 		}
 
