@@ -15,7 +15,7 @@ namespace HL7ListenerApplication {
 		const int TCP_TIMEOUT = 300000; // timeout value for receiving TCP data in milliseconds
 		private TcpListener tcpListener;
 		private Thread tcpListenerThread;
-		private Thread passthruThread;
+		private Thread passthruThread = null;
 		//		private Thread passthruAckThread;
 		private int listenerPort;
 		private string archivePath = null;
@@ -81,7 +81,7 @@ namespace HL7ListenerApplication {
 			this.tcpListenerThread = new Thread(new ThreadStart(StartListener));
 			this.tcpListenerThread.Start();
 			LogImportant("Press 'ESC' to exit.");
-			LogInformation("Starting HL7 listener on port " + this.listenerPort);
+			LogInformation($"Starting HL7 listener (v{System.Reflection.Assembly.GetEntryAssembly().GetName().Version}) on port {this.listenerPort}");
 			LogInformation($"Message encoding: {this.encoder.EncodingName}");
 			// log information to the console about the options provided by the user
 			if (this.archivePath != null) {
@@ -93,41 +93,13 @@ namespace HL7ListenerApplication {
 			if (!sendACK) {
 				this.LogInformation("Acknowledgements (ACKs) will not be sent");
 			}
-			this.LogInformation("TLS: " + this.tlsRequired);
-			this.LogInformation("Message Debugging: " + this.debug);
+			this.LogInformation($"TLS: {this.tlsRequired}");
+			this.LogInformation($"Message Debugging: {this.debug}");
 			// if  a passthru host has been specified, create a new thread to send messages to the PassThru host
 			if (this.passthruHost != null) {
-				// create a connection to the Passthru host if the -PassThru option was specified.
-				try {
-					passthruClient = new TcpClient();
-					remoteEndpoint = new IPEndPoint(IPAddress.Parse(this.PassthruHost), this.passthruPort);
-					passthruClient.ConnectAsync(remoteEndpoint, cancelToken);
-					PassthruClientStream = passthruClient.GetStream();
-					PassthruClientStream.ReadTimeout = TCP_TIMEOUT;
-					PassthruClientStream.WriteTimeout = TCP_TIMEOUT;
-					this.LogInformation("Passing messages onto " + this.passthruHost + ":" + this.passthruPort);
+				if (!startPassthruClient()) {
+					this.LogWarning($"Unable to connect to PassThru host {this.passthruHost}:{this.passthruPort}");
 				}
-				// handle user cancel events
-				catch (System.OperationCanceledException) {
-					LogInformation("Cancel requested. Closing connection to PassThru host " + passthruHost + ":" + passthruPort);
-					passthruClient.Close();
-					passthruClient.Dispose();
-					return true;
-				}
-				// report all other exceptions and exit
-				catch (Exception e) {
-					LogWarning("Unable to create connection to PassThru host " + passthruHost + ":" + passthruPort);
-					LogWarning(e.Message);
-					this.RequestStop();
-					return false;
-				}
-				// create a thread to send messages to the Passsthru host 
-				this.passthruThread = new Thread(new ThreadStart(SendData));
-				passthruThread.Start();
-				// create a thread to receive the ACKs from the passthru host
-				//		this.passthruAckThread = new Thread(new ThreadStart(ReceiveACK));
-				//			passthruAckThread.Start();
-				LogInformation("Connected to PassThru host");
 			}
 
 			while (!Console.KeyAvailable) {
@@ -141,12 +113,46 @@ namespace HL7ListenerApplication {
 			return true;
 		}
 
+		public bool startPassthruClient() {
+			// create a connection to the Passthru host if the -PassThru option was specified.
+			try {
+				passthruClient = new TcpClient();
+				remoteEndpoint = new IPEndPoint(IPAddress.Parse(this.PassthruHost), this.passthruPort);
+				passthruClient.ConnectAsync(remoteEndpoint, this.srcCancelToken.Token).GetAwaiter().GetResult();
+				PassthruClientStream = passthruClient.GetStream();
+				PassthruClientStream.ReadTimeout = TCP_TIMEOUT;
+				PassthruClientStream.WriteTimeout = TCP_TIMEOUT;
+				this.LogInformation("Passing messages onto " + this.passthruHost + ":" + this.passthruPort);
+				// create a thread to send messages to the Passsthru host 
+				this.passthruThread = new Thread(new ThreadStart(SendData));
+				passthruThread.Start();
+				// create a thread to receive the ACKs from the passthru host
+				//		this.passthruAckThread = new Thread(new ThreadStart(ReceiveACK));
+				//			passthruAckThread.Start();
+				LogInformation("Connected to PassThru host");
+				return true;
+			}
+			// handle user cancel events
+			catch (System.OperationCanceledException) {
+				LogInformation("Cancel requested. Closing connection to PassThru host " + passthruHost + ":" + passthruPort);
+				passthruClient.Close();
+				passthruClient.Dispose();
+				return true;
+			}
+			// report all other exceptions and exit
+			catch (Exception e) {
+				LogWarning("Unable to create connection to PassThru host " + passthruHost + ":" + passthruPort);
+				LogWarning(e.Message);
+				LogDebug(e.ToString());
+				return false;
+			}
+		}
 
 		/// <summary>
 		/// Stop the all threads
 		/// </summary>
 		public void RequestStop() {
-			LogWarning("Cancelling all running threads.");
+			LogInformation("Cancelling all running threads.");
 			// stop processing loops
 			this.runThread = false;
 			// cancel all async operations
@@ -186,6 +192,7 @@ namespace HL7ListenerApplication {
 				LogWarning("An error occurred while attempting to start the listener on port " + this.listenerPort);
 				LogWarning(e.Message);
 				LogWarning("HL7Listener exiting.");
+				LogDebug(e.ToString());
 			}
 		}
 
@@ -226,8 +233,9 @@ namespace HL7ListenerApplication {
 					break;
 				}
 				// A network error has occurred
-				catch {
+				catch (Exception e) {
 					LogInformation("Connection from " + tcpClient.Client.RemoteEndPoint + " has ended");
+					LogDebug(e.ToString());
 					break;
 				}
 				// The client has disconnected
@@ -239,21 +247,34 @@ namespace HL7ListenerApplication {
 				messageData += encoder.GetString(messageBuffer, 0, bytesRead);
 
 				// Log the message received if debug is enabled
-				if (this.debug) {
-					LogInformation("Received message\n: " + messageData);
-				}
+				LogDebug($"Received message:\n: {messageData}");
 
 				// Find a VT character, this is the beginning of the MLLP frame
 				int start = messageData.IndexOf((char)0x0B);
+				LogDebug($"Start of MLLP frame found at index: {start}");
 				if (start >= 0) {
 					// Search for the end of the MLLP frame (a FS character)
 					int end = messageData.IndexOf((char)0x1C);
+					LogDebug($"End of MLLP frame found at index: {end}");
 					if (end > start) {
 						messageCount++;
 						try {
 							// queue the message to sent to the passthru host if the -PassThru option has been set
 							if (passthruHost != null) {
+								// if the passthru thread is not running, attempt to restart it.
+								LogDebug($"Checking if passthru thread is running. PassthruThread.IsAlive: {this.passthruThread?.IsAlive}");
+								if (this.passthruThread == null || !this.passthruThread.IsAlive) {
+									LogInformation("Passthru thread is not running. Attempting to restart.");
+									if (!startPassthruClient()) {
+										this.LogWarning($"Unable to connect to PassThru host {this.passthruHost}:{this.passthruPort}");
+									}
+								}
+								LogDebug($"Queuing message to send to PassThru host {this.passthruHost}:{this.passthruPort}");
 								messageQueue.Enqueue(messageData.Substring(start + 1, end - (start + 1)));
+								LogDebug($"Message queued. Current queue count: {messageQueue.Count}");
+							}
+							else {
+								LogDebug("No PassThru host specified.");
 							}
 							// create a HL7message object from the message received. Use this to access elements needed to populate the ACK message and file name of the archived message
 							HL7Message message = new HL7Message(messageData.Substring(start + 1, end - (start + 1)));
@@ -287,6 +308,7 @@ namespace HL7ListenerApplication {
 									// A network error has occurred
 									LogInformation("An error has occurred while sending an ACK to the client " + tcpClient.Client.RemoteEndPoint);
 									LogInformation(e.Message);
+									LogDebug(e.ToString());
 									break;
 								}
 							}
@@ -295,6 +317,7 @@ namespace HL7ListenerApplication {
 							messageData = ""; // reset the message data string for the next message
 							LogWarning("An exception occurred while parsing the HL7 message");
 							LogWarning(e.Message);
+							LogDebug(e.ToString());
 							break;
 						}
 					}
@@ -347,9 +370,10 @@ namespace HL7ListenerApplication {
 						LogInformation("Cancel requested. Closing connection to " + tcpClient.Client.RemoteEndPoint);
 						break;
 					}
-					catch {
+					catch (Exception e) {
 						// A network error has occurred
 						LogInformation("Connection from " + tcpClient.Client.RemoteEndPoint + " has ended");
+						LogDebug(e.ToString());
 						break;
 					}
 					if (bytesRead == 0) {
@@ -361,13 +385,11 @@ namespace HL7ListenerApplication {
 					messageData += encoder.GetString(messageBuffer, 0, bytesRead);
 
 					// Log the message received if debug is enabled
-					if (this.debug) {
-						LogInformation("Received message:\n: " + messageData);
-					}
-
+					LogDebug($"Received message:\n: {messageData}");
 
 					// Find a VT character, this is the beginning of the MLLP frame
 					int start = messageData.IndexOf((char)0x0B);
+					LogDebug($"Start of MLLP frame found at index: {start}");
 					if (start >= 0) {
 						// Search for the end of the MLLP frame (a FS character)
 						int end = messageData.IndexOf((char)0x1C);
@@ -375,7 +397,16 @@ namespace HL7ListenerApplication {
 							messageCount++;
 							try {
 								// queue the message to sent to the passthru host if the -PassThru option has been set
+								LogDebug($"Message received from {tcpClient.Client.RemoteEndPoint}. Queuing message to send to PassThru host {this.passthruHost}:{this.passthruPort}");
 								if (passthruHost != null) {
+									// if the passthru thread is not running, attempt to restart it.
+									if (this.passthruThread == null || !this.passthruThread.IsAlive) {
+										LogInformation("Passthru thread is not running. Attempting to restart.");
+										if (!startPassthruClient()) {
+											this.LogWarning($"Unable to connect to PassThru host {this.passthruHost}:{this.passthruPort}");
+										}
+									}
+									LogDebug($"Queuing message to send to PassThru host {this.passthruHost}:{this.passthruPort}");
 									messageQueue.Enqueue(messageData.Substring(start + 1, end - (start + 1)));
 								}
 								// create a HL7message object from the message received. Use this to access elements needed to populate the ACK message and file name of the archived message
@@ -414,7 +445,7 @@ namespace HL7ListenerApplication {
 										// A network error has occurred
 										LogInformation("An error has occurred while sending an ACK to the client " + tcpClient.Client.RemoteEndPoint);
 										LogInformation(e.Message);
-										LogInformation(e.InnerException.ToString());
+										LogDebug(e.ToString());
 										break;
 									}
 								}
@@ -423,6 +454,7 @@ namespace HL7ListenerApplication {
 								messageData = ""; // reset the message data string for the next message
 								LogWarning("An exception occurred while parsing the HL7 message");
 								LogWarning(e.Message);
+								LogDebug(e.ToString());
 								break;
 							}
 						}
@@ -446,6 +478,7 @@ namespace HL7ListenerApplication {
 			catch (Exception e) {
 				LogWarning("An error occurred while attempting to negotiate TLS.");
 				LogWarning(e.Message);
+				LogDebug(e.ToString());
 			}
 		}
 
@@ -463,7 +496,7 @@ namespace HL7ListenerApplication {
 
 			while (this.runThread) {
 				while (messageQueue.TryDequeue(out tempMessage)) {
-
+					LogDebug("dequeued message to send to PassThru host");
 					int bytesRead;
 					string ackData = "";
 					byte[] receiveBuffer = new byte[4096];
@@ -481,13 +514,13 @@ namespace HL7ListenerApplication {
 						byte[] buffer = encoder.GetBytes(messageString.ToString().ToCharArray());
 
 						// if the client connection has timed out, or the remote host has disconnected, reconnect.
-						if (!this.PassthruClientStream.CanWrite) {
+						LogDebug($"Checking if connection to passthru host is still open. PassthruClientStream.CanWrite: {this.PassthruClientStream.CanWrite}, PassthruClientStream.CanRead: {this.PassthruClientStream.CanRead}");
+						if (!this.PassthruClientStream.CanWrite || !this.PassthruClientStream.CanRead) {
 							LogInformation("Connection to passthru host has closed. Reconnecting to " + this.passthruHost + ":" + this.passthruPort);
 							this.passthruClient.Close();
 							this.passthruClient = new TcpClient();
 							this.remoteEndpoint = new IPEndPoint(IPAddress.Parse(this.PassthruHost), this.passthruPort);
-							this.passthruClient.ConnectAsync(remoteEndpoint, cancelToken);
-
+							this.passthruClient.ConnectAsync(remoteEndpoint, cancelToken).GetAwaiter().GetResult();
 							this.PassthruClientStream = passthruClient.GetStream();
 							this.PassthruClientStream.ReadTimeout = TCP_TIMEOUT;
 							this.PassthruClientStream.WriteTimeout = TCP_TIMEOUT;
@@ -514,6 +547,7 @@ namespace HL7ListenerApplication {
 					catch (Exception e) {
 						LogWarning("Unable to send message to -Passsthru host (" + this.PassthruHost + ":" + this.passthruPort + ")");
 						LogWarning(e.Message);
+						LogDebug(e.ToString());
 					}
 				}
 				Thread.Sleep(500);
@@ -547,6 +581,7 @@ namespace HL7ListenerApplication {
 			catch (Exception e) {
 				LogWarning("Failed to write file " + filename);
 				LogWarning(e.Message);
+				LogDebug(e.ToString());
 			}
 		}
 
@@ -664,6 +699,14 @@ namespace HL7ListenerApplication {
 			Console.ForegroundColor = ConsoleColor.Yellow;
 			Console.WriteLine("WARNING: " + message);
 			Console.ResetColor();
+		}
+
+		private void LogDebug(string message) {
+			if (this.debug) {
+				Console.ForegroundColor = ConsoleColor.Cyan;
+				Console.WriteLine("DEBUG: " + message);
+				Console.ResetColor();
+			}
 		}
 
 		/// <summary>
