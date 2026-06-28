@@ -42,7 +42,7 @@ __-FilePath \<path\>__:  Specifies the location to save the HL7 messages to. If 
 
 e.g.  `HL7Listener -Port 5000 -FilePath c:\HL7\saved-messages`
 
-__-PassThru \<host\>:\<port\>__: Pass any messages received onto the remote host after saving the messages to disk. 
+__-PassThru \<host\>:\<port\>__: Pass any messages received onto the remote host after saving the messages to disk. This expects the remote listener targeted by the Passthru parameter to be running when Hl7Listener starts - but if it fails to connect on startup it will reattempt a connection when sending messages to the PassThru target.
 
 e.g. `HL7Listener -Port 5000 -FilePath c:\HL7\saved-messages -passthru 192.168.0.50:6000`
 
@@ -59,4 +59,4 @@ Note: The TLS encryption will only apply to connections from remote clients, it 
 
 The file naming convention of the saved files includes the date time stamp, and random 6 digit sequence number, and the message trigger. e.g. `201505301529_028615_ADT^A01.hl7`. If multiple messages are received from the same TCP session, the sequence number will increment for each message. If the TCP connection is closed and reopened for each message sent, each file name will have a non-sequential (random) sequence number.
 
-__-Debug__: Log the messages received (including MLLP framing characters) and ACKs send to the console. 
+__-Debug__: Log the messages received (including MLLP framing characters) and ACKs send to the console. Additional debug information and exceptions will be included. 
