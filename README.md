@@ -27,9 +27,11 @@ Windows
 HL7Listener.exe -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>] [-TLS <certificate-path | certificate-thumbprint>] [-Debug]
 ```
 Linux
+>Note: As a prerequisite, Linux requires a ICU package installed on the system. e.g. libicu or icu-libs
 ```
 HL7Listener -Port <port-number> [-FilePath <path>] [-PassThru <host>:<port>] [-NoACK] [-Encoding <UTF8 | ASCII | Latin1>] [-TLS <certificate-path>]
 ```
+
 Press the 'ESC' key from the console to terminate the program. 
 
 ### Parameters
