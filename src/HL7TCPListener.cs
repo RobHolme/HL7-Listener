@@ -83,6 +83,16 @@ namespace HL7ListenerApplication {
 			LogImportant("Press 'ESC' to exit.");
 			LogInformation($"Starting HL7 listener (v{System.Reflection.Assembly.GetEntryAssembly().GetName().Version}) on port {this.listenerPort}");
 			LogInformation($"Message encoding: {this.encoder.EncodingName}");
+			// log local IP address to the console if debug is enabled
+			if (this.debug == true) {
+				LogDebug($"Listener bound to: {this.tcpListener.LocalEndpoint}");
+				var host = Dns.GetHostEntry(Dns.GetHostName());
+				foreach (var ip in host.AddressList) {
+					if (ip.AddressFamily == AddressFamily.InterNetwork || ip.AddressFamily == AddressFamily.InterNetworkV6) {
+						LogDebug($"Local IP Address: {ip}");
+					}
+				}
+			}
 			// log information to the console about the options provided by the user
 			if (this.archivePath != null) {
 				this.LogInformation("Archiving received messages to: " + this.archivePath);
